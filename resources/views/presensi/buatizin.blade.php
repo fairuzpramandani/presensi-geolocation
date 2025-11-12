@@ -1,7 +1,6 @@
 @extends('layouts.presensi')
 
 @section('header')
-{{-- ... (Bagian header Anda tetap sama) ... --}}
 <div class="appHeader bg-primary text-light">
     <div class="left">
         <a href="javascript:;" class="headerButton goBack">

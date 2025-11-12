@@ -39,7 +39,7 @@ class PresensiController extends Controller
             ['lat' => -7.346229427986888, 'long' => 112.78391129687654, 'nama' => 'Gerbang Tol TambakSumur 2'],
             ['lat' => -7.357726813064598, 'long' => 112.80496911781243, 'nama' => 'Gerbang Tol Juanda'],
             ['lat' => -7.497382601382557, 'long' => 112.72027988527945, 'nama' => 'Test'],
-            ['lat' => -7.263797, 'long' => 112.737429, 'nama' => 'Test 1'],
+            ['lat' => -7.270950525574215, 'long' => 112.74462413727203, 'nama' => 'Test 1'],
         ];
 
         $lokasi_valid = false;
@@ -106,6 +106,7 @@ class PresensiController extends Controller
                 'jam_in' => $jam,
                 'foto_in' => $fileName,
                 'location_in' => $lokasi,
+                'nama_lokasi_in' => $nama_lokasi
             ];
             $simpan = DB::table('presensi')->insert($data);
             if ($simpan) {
@@ -233,5 +234,32 @@ class PresensiController extends Controller
         }else{
             return redirect('/presensi/izin')->with(['Error'=>'Data Gagal Disimpan']);
         }
+    }
+    public function monitoring()
+    {
+        return view('presensi.monitoring');
+    }
+
+    public function getpresensi(Request $request)
+    {
+        $tanggal = $request->tanggal;
+        $presensi = DB::table ('presensi')
+        ->select('presensi.*','nama_lengkap', 'nama_dept')
+        ->join('karyawan', 'presensi.email', '=', 'karyawan.email')
+        ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+        ->where('tgl_presensi', $tanggal)
+        ->get();
+
+        return view('presensi.getpresensi', compact('presensi'));
+    }
+
+    public function tampilkanpeta(Request $request)
+    {
+        $id = $request->id;
+        $presensi = DB::table('presensi')
+            ->join('karyawan', 'presensi.email', '=', 'karyawan.email')
+            ->where('id', $id)
+            ->first();
+        return view('presensi.showmap', compact('presensi'));
     }
 }

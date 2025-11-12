@@ -79,7 +79,10 @@
     function successCallback(position) {
         lokasi.value = position.coords.latitude + "," + position.coords.longitude;
 
-        var map = L.map('map').setView([position.coords.latitude, position.coords.longitude], 18);
+        var map = L.map('map', {
+            attributionControl: false
+        }).setView([position.coords.latitude, position.coords.longitude], 18);
+
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap'
@@ -93,7 +96,7 @@
             { lat: -7.346229427986888, long: 112.78391129687654, nama: "Gerbang Tol TambakSumur 2" },
             { lat: -7.357726813064598, long: 112.80496911781243, nama: "Gerbang Tol Juanda" },
             { lat: -7.497382601382557, long: 112.72027988527945, nama: "Test" },
-            { lat: -7.263797, long: 112.737429, nama: "Test 1" }
+            { lat: -7.270950525574215, long: 112.74462413727203, nama: "Test 1" }
 
         ];
 
