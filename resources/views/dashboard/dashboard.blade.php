@@ -173,7 +173,7 @@
                                     <div class="in">
                                         <div>{{ date("d M Y",strtotime($d->tgl_presensi)) }}</div>
                                         <span class="badge badge-success">{{ $d->jam_in }}</span>
-                                        <span class="badge badge-danger">{{ $presensihariini != null && $d->jam_out != null ? $d->jam_out :'Belum Absen' }}</span>
+                                        <span class="badge badge-danger">{{ $d->jam_out != null ? $d->jam_out : 'Belum Absen' }}</span>
                                     </div>
                                 </div>
                             </li>

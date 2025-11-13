@@ -39,7 +39,7 @@ class PresensiController extends Controller
             ['lat' => -7.346229427986888, 'long' => 112.78391129687654, 'nama' => 'Gerbang Tol TambakSumur 2'],
             ['lat' => -7.357726813064598, 'long' => 112.80496911781243, 'nama' => 'Gerbang Tol Juanda'],
             ['lat' => -7.497382601382557, 'long' => 112.72027988527945, 'nama' => 'Test'],
-            ['lat' => -7.270950525574215, 'long' => 112.74462413727203, 'nama' => 'Test 1'],
+            ['lat' => -7.32031997825219, 'long' => 112.73802915918043, 'nama' => 'Test 1'],
         ];
 
         $lokasi_valid = false;
@@ -100,13 +100,19 @@ class PresensiController extends Controller
                 echo "error|Anda belum bisa absen masuk. Absen dibuka mulai jam 07:40.|in";
                 return;
             }
+
+            $jam_masuk_maksimal = "17:00:00";
+            if ($jam > $jam_masuk_maksimal) {
+                echo "error|Waktu absen masuk sudah habis. Anda tidak bisa absen masuk setelah jam 17:00.|in";
+                return;
+            }
+
             $data = [
                 'email' => $email,
                 'tgl_presensi' => $tgl_presensi,
                 'jam_in' => $jam,
                 'foto_in' => $fileName,
                 'location_in' => $lokasi,
-                'nama_lokasi_in' => $nama_lokasi
             ];
             $simpan = DB::table('presensi')->insert($data);
             if ($simpan) {
@@ -271,11 +277,152 @@ class PresensiController extends Controller
     }
 
     public function cetaklaporan(Request $request)
+{
+    $email = $request->email;
+    $bulan = $request->bulan;
+    $tahun = $request->tahun;
+    $namabulan = ["","Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember",];
+
+    if (empty($email)) {
+        return redirect()->back()->with(['warning' => 'Silakan Pilih Karyawan Terlebih Dahulu']);
+    }
+
+    $karyawan = DB::table('karyawan')
+        ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+        ->where('email', $email)
+        ->first();
+
+    $presensi = DB::table('presensi')
+        ->where('email', $email)
+        ->whereRaw('MONTH(tgl_presensi)="' . $bulan . '"')
+        ->whereRaw('YEAR(tgl_presensi)="' . $tahun . '"')
+        ->orderBy('tgl_presensi')
+        ->get();
+
+    $lokasi_kantor = [
+        ['lat' => -7.34388593350558, 'long' => 112.73523239636584, 'nama' => 'Kantor Pusat CMS', 'radius' => 100],
+        ['lat' => -7.344679449869948, 'long' => 112.73472526289694, 'nama' => 'Gerbang Tol Menanggal', 'radius' => 100],
+        ['lat' => -7.342730715106749, 'long' => 112.75809102472155, 'nama' => 'Gerbang Tol Berbek 1', 'radius' => 100],
+        ['lat' => -7.343185332266911, 'long' => 112.75237532014978, 'nama' => 'Gerbang Tol Berbek 2', 'radius' => 100],
+        ['lat' => -7.3470567753921845, 'long' => 112.78926810447702, 'nama' => 'Gerbang Tol TambakSumur 1', 'radius' => 100],
+        ['lat' => -7.346229427986888, 'long' => 112.78391129687654, 'nama' => 'Gerbang Tol TambakSumur 2', 'radius' => 100],
+        ['lat' => -7.357726813064598, 'long' => 112.80496911781243, 'nama' => 'Gerbang Tol Juanda', 'radius' => 100],
+        ['lat' => -7.497382601382557, 'long' => 112.72027988527945, 'nama' => 'Test', 'radius' => 100],
+        ['lat' => -7.270950525574215, 'long' => 112.74462413727203, 'nama' => 'Test 1', 'radius' => 100],
+    ];
+    foreach ($presensi as $item) {
+        $nama_lokasi_ditemukan = "Luar Radius";
+
+        if (!empty($item->location_in)) {
+            $lokasi_karyawan = explode(",", $item->location_in);
+            $lat_karyawan = $lokasi_karyawan[0];
+            $long_karyawan = $lokasi_karyawan[1];
+
+            foreach ($lokasi_kantor as $kantor) {
+                $jarak = $this->distance($kantor['lat'], $kantor['long'], $lat_karyawan, $long_karyawan);
+                $radius = round($jarak["meters"]);
+
+                if ($radius <= $kantor['radius']) {
+                    $nama_lokasi_ditemukan = $kantor['nama'];
+                    break;
+                }
+            }
+        }
+        $item->nama_lokasi_in = $nama_lokasi_ditemukan;
+    }
+    return view('presensi.cetaklaporan', compact('bulan', 'tahun','namabulan','karyawan', 'presensi'));
+    }
+
+    public function rekap()
     {
-        $email = $request->email;
+        $namabulan = ["","Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember",];
+        return view('presensi.rekap', compact('namabulan'));
+    }
+
+   public function cetakrekap(Request $request)
+    {
         $bulan = $request->bulan;
         $tahun = $request->tahun;
+        $namabulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        $namabulan_terpilih = $namabulan[$bulan] ?? '';
+        $batas_telat_sql = "08:00:00";
+        $semua_karyawan = DB::table('karyawan')
+            ->select('email', 'nama_lengkap')
+            ->orderBy('nama_lengkap')
+            ->get();
+        $rekap_presensi = DB::table('presensi')
+            ->selectRaw("presensi.email, karyawan.nama_lengkap,
+                MAX(IF(DAY(tgl_presensi) = 1, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_1,
+                MAX(IF(DAY(tgl_presensi) = 2, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_2,
+                MAX(IF(DAY(tgl_presensi) = 3, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_3,
+                MAX(IF(DAY(tgl_presensi) = 4, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_4,
+                MAX(IF(DAY(tgl_presensi) = 5, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_5,
+                MAX(IF(DAY(tgl_presensi) = 6, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_6,
+                MAX(IF(DAY(tgl_presensi) = 7, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_7,
+                MAX(IF(DAY(tgl_presensi) = 8, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_8,
+                MAX(IF(DAY(tgl_presensi) = 9, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_9,
+                MAX(IF(DAY(tgl_presensi) = 10, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_10,
+                MAX(IF(DAY(tgl_presensi) = 11, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_11,
+                MAX(IF(DAY(tgl_presensi) = 12, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_12,
+                MAX(IF(DAY(tgl_presensi) = 13, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_13,
+                MAX(IF(DAY(tgl_presensi) = 14, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_14,
+                MAX(IF(DAY(tgl_presensi) = 15, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_15,
+                MAX(IF(DAY(tgl_presensi) = 16, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_16,
+                MAX(IF(DAY(tgl_presensi) = 17, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_17,
+                MAX(IF(DAY(tgl_presensi) = 18, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_18,
+                MAX(IF(DAY(tgl_presensi) = 19, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_19,
+                MAX(IF(DAY(tgl_presensi) = 20, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_20,
+                MAX(IF(DAY(tgl_presensi) = 21, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_21,
+                MAX(IF(DAY(tgl_presensi) = 22, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_22,
+                MAX(IF(DAY(tgl_presensi) = 23, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_23,
+                MAX(IF(DAY(tgl_presensi) = 24, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_24,
+                MAX(IF(DAY(tgl_presensi) = 25, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_25,
+                MAX(IF(DAY(tgl_presensi) = 26, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_26,
+                MAX(IF(DAY(tgl_presensi) = 27, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_27,
+                MAX(IF(DAY(tgl_presensi) = 28, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_28,
+                MAX(IF(DAY(tgl_presensi) = 29, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_29,
+                MAX(IF(DAY(tgl_presensi) = 30, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_30,
+                MAX(IF(DAY(tgl_presensi) = 31, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_31,
 
-        return view('presensi.cetaklaporan');
+                /* === INI TAMBAHAN BARU === */
+                COUNT(presensi.jam_in) as total_hadir,
+                SUM(IF(presensi.jam_in > '$batas_telat_sql', 1, 0)) as total_terlambat
+                /* ======================== */
+            ")
+            ->join('karyawan', 'presensi.email', '=', 'karyawan.email')
+            ->whereRaw('MONTH(tgl_presensi) = ?', [$bulan])
+            ->whereRaw('YEAR(tgl_presensi) = ?', [$tahun])
+            ->groupByRaw('presensi.email, karyawan.nama_lengkap')
+            ->get()
+            ->keyBy('email');
+
+        $rekap_final = [];
+
+        foreach ($semua_karyawan as $karyawan) {
+            if (isset($rekap_presensi[$karyawan->email])) {
+                $rekap_final[] = $rekap_presensi[$karyawan->email];
+            } else {
+                $data_kosong = new \stdClass();
+                $data_kosong->email = $karyawan->email;
+                $data_kosong->nama_lengkap = $karyawan->nama_lengkap;
+
+                for ($i = 1; $i <= 31; $i++) {
+                    $tgl = 'tgl_' . $i;
+                    $data_kosong->$tgl = '';
+                }
+
+                $data_kosong->total_hadir = 0;
+                $data_kosong->total_terlambat = 0;
+                $rekap_final[] = $data_kosong;
+            }
+        }
+
+        return view('presensi.cetakrekap', [
+            'rekap' => $rekap_final,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'namabulan' => $namabulan_terpilih
+        ]);
     }
+
 }

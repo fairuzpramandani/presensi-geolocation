@@ -4,7 +4,7 @@
     <div class="container-xl">
         <div class="row g-2 align-items-center">
             <div class="col">
-                <h2 class="page-title">Laporan Presensi</h2>
+                <h2 class="page-title">Rekap Presensi</h2>
             </div>
         </div>
     </div>
@@ -20,7 +20,7 @@
                                 {{ Session::get('warning') }}
                             </div>
                         @endif
-                        <form action="/presensi/cetaklaporan" target="_blank" method="POST" id="frmLaporan">
+                        <form action="/presensi/cetakrekap" target="_blank" method="POST" id="frmLaporan">
                             @csrf
                             <div class="row mt-2">
                                 <div class="col-12">
@@ -46,18 +46,6 @@
                                             @for ($tahun=$tahunmulai; $tahun<= $tahunskrg; $tahun++)
                                                 <option value="{{ $tahun }}" {{ date("Y") == $tahun ? 'selected' : '' }}>{{ $tahun }}</option>
                                             @endfor
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-12">
-                                    <div class="form-group">
-                                        <select name="email" id="email" class="form-select">
-                                            <option value="">Pilih Karyawan</option>
-                                            @foreach ($karyawan as $d)
-                                                <option value="{{ $d->email }}">{{ $d->nama_lengkap }}</option>
-                                            @endforeach
                                         </select>
                                     </div>
                                 </div>
