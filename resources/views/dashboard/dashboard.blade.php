@@ -1,212 +1,70 @@
 @extends('layouts.presensi')
 @section('content')
 
-<div class="section" id="user-section" style="margin-top: -22px;">
-            <div id="user-detail">
-                <div class="avatar">
-                    @if(!empty(Auth::guard('karyawan')->user()->foto))
-                    <img src="{{ asset('storage/uploads/karyawan/'.Auth::guard('karyawan')->user()->foto) }}"
-                    alt="Avatar" class="avatar" style="width:100px; height:100px; border-radius:50%;object-fit: cover;">
-                    @else
-                    <img src="assets/img/sample/avatar/avatar1.jpg" alt="avatar" class="imaged w64 rounded">
-                    @endif
-                </div>
-                <div id="user-info">
-                    <h2 id="user-name">{{ Auth::guard ('karyawan')->user()->nama_lengkap}}</h2>
-                    <span id="user-role">{{ Auth::guard ('karyawan')->user()->jabatan}}</span>
-                </div>
-            </div>
-        </div>
+<div class="app-header">
+    <div>
+        <img src="{{ asset('assets/img/cms-hadir.png') }}" alt="Logo" class="logo">
+    </div>
+    <div>
+        @if(!empty(Auth::guard('karyawan')->user()->foto))
+        <img src="{{ asset('storage/uploads/karyawan/'.Auth::guard('karyawan')->user()->foto) }}" alt="Avatar" class="avatar">
+        @else
+        <img src="{{ asset('assets/img/sample/avatar/avatar1.jpg') }}" alt="avatar" class="avatar">
+        @endif
+    </div>
+</div>
 
-        <div class="section" id="menu-section">
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="list-menu">
-                        <div class="item-menu text-center">
-                            <div class="menu-icon">
-                                <a href="/editprofile" class="green" style="font-size: 40px;">
-                                    <ion-icon name="person-sharp"></ion-icon>
-                                </a>
-                            </div>
-                            <div class="menu-name">
-                                <span class="text-center">Profil</span>
-                            </div>
-                        </div>
-                        <div class="item-menu text-center">
-                            <div class="menu-icon">
-                                <a href="/presensi/izin" class="danger" style="font-size: 40px;">
-                                    <ion-icon name="calendar-number"></ion-icon>
-                                </a>
-                            </div>
-                            <div class="menu-name">
-                                <span class="text-center">Cuti</span>
-                            </div>
-                        </div>
-                        <div class="item-menu text-center">
-                            <div class="menu-icon">
-                                <a href="/presensi/histori" class="warning" style="font-size: 40px;">
-                                    <ion-icon name="document-text"></ion-icon>
-                                </a>
-                            </div>
-                            <div class="menu-name">
-                                <span class="text-center">Histori</span>
-                            </div>
-                        </div>
-                        <div class="item-menu text-center">
-                            <div class="menu-icon">
-                                <a href="/presensi/create" class="blue" style="font-size: 40px;">
-                                    <ion-icon name="camera"></ion-icon>
-                                </a>
-                            </div>
-                            <div class="menu-name">
-                                Absen
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="section mt-2" id="presence-section">
-            <div class="todaypresence">
-                <div class="row">
-                    <div class="col-6">
-                        <div class="card gradasigreen">
-                            <div class="card-body">
-                                <div class="presencecontent">
-                                    <div class="iconpresence">
-                                        <ion-icon name="camera"></ion-icon>
-                                    </div>
-                                    <div class="presencedetail">
-                                        <h4 class="presencetitle">Masuk</h4>
-                                        <span>{{ $presensihariini != null ? $presensihariini->jam_in : 'Belum Absen'}}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="card gradasired">
-                            <div class="card-body">
-                                <div class="presencecontent">
-                                    <div class="iconpresence">
-                                        <ion-icon name="camera"></ion-icon>
-                                    </div>
-                                    <div class="presencedetail">
-                                        <h4 class="presencetitle">Pulang</h4>
-                                        <span>{{ $presensihariini != null && $presensihariini->jam_out != null  ? $presensihariini->jam_out : 'Belum Absen'}}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id="rekappresensi">
-                <div class="row">
-                    <div class="col-3">
-                        <div class="card">
-                            <div class="card-body text-center" style="padding: 16px 12px !important; line-height: 1rem">
-                                <ion-icon name= "accessibility-outline" style="font-size: 1.6rem;" class= "text-primary"></ion-icon>
-                                <br>
-                                <span style="font-size: 0.8rem; font-weight:500">Hadir</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="card">
-                            <div class="card-body text-center" style="padding: 16px 12px !important; line-height: 1rem">
-                                <ion-icon name= "newspaper-outline" style="font-size: 1.6rem;" class= "text-success"></ion-icon>
-                                <br>
-                                <span style="font-size: 0.8rem; font-weight:500">Izin</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="card">
-                            <div class="card-body text-center" style="padding: 16px 12px !important; line-height: 1rem">
-                                <ion-icon name= "medkit-outline" style="font-size: 1.6rem;" class= "text-warning"></ion-icon>
-                                <br>
-                                <span style="font-size: 0.8rem; font-weight:500">Sakit</span>
-                            </div>
-                        </div>
-                    </div>
-                     <div class="col-3">
-                        <div class="card">
-                            <div class="card-body text-center" style="padding: 16px 12px !important; line-height: 1rem">
-                                <ion-icon name= "time-outline" style="font-size: 1.6rem;" class= "text-danger"></ion-icon>
-                                <br>
-                                <span style="font-size: 0.8rem; font-weight:500">telat</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="presencetab mt-2">
-                <div class="tab-pane fade show active" id="pilled" role="tabpanel">
-                    <ul class="nav nav-tabs style1" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" data-toggle="tab" href="#home" role="tab">
-                                Bulan Ini
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" data-toggle="tab" href="#profile" role="tab">
-                                Leaderboard
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div class="tab-content mt-2" style="margin-bottom:100px;">
-                    <div class="tab-pane fade show active" id="home" role="tabpanel">
-                        <ul class="listview image-listview">
-                            @foreach ($historibulanini as $d)
-                            @php
-                                $path = Storage::url('uploads/absensi/'.$d->foto_in);
-                            @endphp
-                            <li>
-                                <div class="item">
-                                    @if(!empty(Auth::guard('karyawan')->user()->foto))
-                                        <img src="{{ asset('storage/uploads/karyawan/'.Auth::guard('karyawan')->user()->foto) }}" alt="image" class="image">
-                                    @else
-                                        <img src="assets/img/sample/avatar/avatar1.jpg" alt="image" class="image">
-                                    @endif
-                                    <div class="in">
-                                        <div>{{ date("d M Y",strtotime($d->tgl_presensi)) }}</div>
-                                        <span class="badge badge-success">{{ $d->jam_in }}</span>
-                                        <span class="badge badge-danger">{{ $d->jam_out != null ? $d->jam_out : 'Belum Absen' }}</span>
-                                    </div>
-                                </div>
-                            </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    <div class="tab-pane fade" id="profile" role="tabpanel">
-                        <ul class="listview image-listview">
-                            @foreach ($leaderboard as $d)
-                            <li>
-                                <div class="item">
-                                    @if(!empty($d->foto))
-                                        <img src="{{ asset('storage/uploads/karyawan/'.$d->foto) }}" alt="image" class="image">
-                                    @else
-                                        <img src="assets/img/sample/avatar/avatar1.jpg" alt="image" class="image">
-                                    @endif
-                                    <div class="in">
-                                        <div>
-                                            <b>{{$d->nama_lengkap }}<br></b>
-                                            <small class="text-muted">{{ $d->jabatan }}</small>
-                                        </div>
-                                        <span class="badge {{ $d->jam_in < "08:00" ? "bg-success" : "bg-danger" }}">
-                                            {{ $d->jam_in }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </li>
-                            @endforeach
+<div class="greeting-text text-center mb-3">
+    <h2 class="mb-0">
+        @php
+    $hour = date('H');
+    $greeting = "Selamat Datang";
+    if ($hour >= 4 && $hour < 12) {
+        $greeting = "Selamat Pagi";
+    }
+    elseif ($hour >= 12 && $hour < 15) {
+        $greeting = "Selamat Siang";
+    }
+    elseif ($hour >= 15 && $hour < 18) {
+        $greeting = "Selamat Sore";
+    }
+    else {
+        $greeting = "Selamat Malam";
+    }
+@endphp
+{{ $greeting }}
+    </h2>
+    <p class="text-muted mb-0" style="font-size: 0.9rem;">Semoga harimu menyenangkan!</p>
+    <p class="text-muted mb-0">{{ Auth::guard('karyawan')->user()->nama_lengkap }}</p>
+</div>
 
-                        </ul>
-                    </div>
 
-                </div>
-            </div>
-        </div>
+<div class="icon-grid">
+
+    <a href="/presensi/create" class="icon-item">
+        <img src="{{ asset('assets/img/icon/absen-masuk.png') }}" alt="Absen Masuk" class="icon-image">
+        <span>Absen Masuk</span>
+    </a>
+
+    <a href="/presensi/create" class="icon-item">
+        <img src="{{ asset('assets/img/icon/absen-keluar.png') }}" alt="Absen Pulang" class="icon-image">
+        <span>Absen Pulang</span>
+    </a>
+
+    <a href="/presensi/izin" class="icon-item">
+        <img src="{{ asset('assets/img/icon/izin.png') }}" alt="Izin" class="icon-image">
+        <span>Izin</span>
+    </a>
+    <a href="/presensi/histori" class="icon-item">
+        <img src="{{ asset('assets/img/icon/histori.png') }}" alt="Izin" class="icon-image">
+        <span>Histori</span>
+    </a>
+
+</div>
+
+<div style="height: 100px;"></div>
+
 @endsection
+@push('css')
+<link rel="stylesheet" href="{{ asset('assets/css/dashboardcustom.css') }}">
+@endpush

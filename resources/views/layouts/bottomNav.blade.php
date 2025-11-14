@@ -13,24 +13,17 @@
                 <strong>Histori</strong>
             </div>
         </a>
-        <a href="/presensi/create" class="item {{ request()->is('presensi/create') ? 'active' : ''}}">
-            <div class="col">
-                <div class="action-button large">
-                    <ion-icon name="camera" role="img" class="md hydrated" aria-label="add outline"></ion-icon>
-                </div>
-            </div>
-        </a>
         <a href="/presensi/izin" class="item {{ request()->is('presensi/izin', 'presensi/buatizin') ? 'active' : ''}}">
             <div class="col">
             <ion-icon name="calendar-outline"></ion-icon>
                 <strong>Izin</strong>
             </div>
         </a>
-        <a href="/editprofile" class="item {{ request()->is('editprofile') ? 'active' : ''}}">
-            <div class="col">
-                <ion-icon name="people-outline" role="img" class="md hydrated" aria-label="people outline"></ion-icon>
-                <strong>Profile</strong>
-            </div>
+        <a href="/settings" class="item {{ request()->is('settings', 'editprofile') ? 'active' : '' }}">
+        <div class="col">
+            <ion-icon name="settings-outline"></ion-icon>
+            <strong>Settings</strong>
+        </div>
         </a>
     </div>
     <!-- * App Bottom Menu -->

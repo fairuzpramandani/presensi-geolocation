@@ -18,27 +18,25 @@
     <link rel="apple-touch-icon" sizes="180x180" href="assets/img/icon/192x192.png">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link rel="manifest" href="__manifest.json">
-</head>
+
+    @stack('css')
+    </head>
 
 <body style="background-color:#e9ecef;">
 
-    <!-- loader -->
     <div id="loader">
         <div class="spinner-border text-primary" role="status"></div>
     </div>
-    <!-- * loader -->
     @yield('header')
 
-    <!-- App Capsule -->
     <div id="appCapsule">
         @yield('content')
-        </div>
-    <!-- * App Capsule -->
-
+    </div>
     @include('layouts.bottomNav')
 
     @include('layouts.script')
 
-</body>
+    @stack('scripts')
+    </body>
 
 </html>

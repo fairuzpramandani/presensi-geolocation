@@ -110,7 +110,12 @@
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                 <a href="./settings.html" class="dropdown-item">Settings</a>
-                <a href="./sign-in.html" class="dropdown-item">Logout</a>
+                <a href="#" class="dropdown-item" onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">
+                    Logout
+                </a>
+                <form id="admin-logout-form" action="{{ route('admin.logout') }}" method="POST" style="display: none;">
+                    @csrf
+                </form>
               </div>
             </div>
           </div>

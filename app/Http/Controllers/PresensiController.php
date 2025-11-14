@@ -184,6 +184,10 @@ class PresensiController extends Controller
         }
     }
 
+    public function settings()
+    {
+        return view('presensi.settings');
+    }
 
     public function histori()
     {

@@ -1,0 +1,60 @@
+    .icon-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+        padding: 0 16px;
+    }
+    .icon-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .icon-item ion-icon {
+        font-size: 48px;
+        margin-bottom: 4px;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .icon-item .icon-image {
+        width: 150px;
+        height: 150px;
+        object-fit: contain;
+        margin-bottom: 4px;
+        transition: transform 0.2s ease-in-out;
+    }
+    .icon-item:active .icon-image,
+    .icon-item:hover .icon-image {
+        transform: scale(1.1);
+
+    }
+    .icon-item:active ion-icon,
+    .icon-item:hover ion-icon {
+        transform: scale(1.1);
+    }
+    .icon-izin { color: #dc3545; }
+    .icon-histori { color: #ffc107; }
+    .icon-settings { color: #4CAF50; }
+    .icon-bantuan { color: #6c757d; }
+
+    .app-header {
+        padding: 0 16px;
+        margin-top: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .app-header .logo {
+        height: 100px;
+        width: auto;
+    }
+    .app-header .avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+    }

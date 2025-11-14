@@ -64,4 +64,6 @@ class DashboardController extends Controller
         ->first();
         return view ('dashboard.dashboardadmin', compact('rekappresensi','rekapizin'));
     }
+
+
 }

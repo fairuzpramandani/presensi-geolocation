@@ -35,10 +35,14 @@ Route::middleware(['guest:user'])->group(function(){
 });
 
 // LOGIN KARYAWAN
-
-Route::middleware(['auth:karyawan'])->group(function(){
-    Route::get('/proseslogout', [AuthController::class, 'proseslogout']);
+    Route::get('/', [AuthController::class, 'showLoginKaryawan'])->name('login');
+    Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
+    Route::get('/register', [AuthController::class, 'showRegisterPage']);
+    Route::post('/prosesregister', [AuthController::class, 'prosesRegisterKaryawan']);
+    Route::middleware(['auth:karyawan'])->group(function(){
+    Route::post('/proseslogout', [AuthController::class, 'proseslogout'])->name('karyawan.logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth:karyawan');
+    Route::get('/settings', [PresensiController::class, 'settings']);
 
 
     //Presensi
@@ -60,9 +64,10 @@ Route::middleware(['auth:karyawan'])->group(function(){
 });
 
 // LOGIN ADMIN
-
+    Route::post('/prosesregisteradmin', [AuthController::class, 'registerAdmin']);
     Route::middleware(['auth:user'])->group(function () {
     Route::get('/proseslogoutadmin',[AuthController::class, 'proseslogoutadmin']);
+    Route::post('/proseslogoutadmin', [AuthController::class, 'proseslogoutadmin'])->name('admin.logout');
     Route::get('/panel/dashboardadmin',[DashboardController::class, 'dashboardadmin']);
 
     //Karyawan
