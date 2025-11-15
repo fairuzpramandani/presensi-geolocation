@@ -40,7 +40,13 @@
 
 <div class="row">
     <div class="col">
-        @if ($cek > 0)
+        @php
+            $ket = request()->get('ket');
+            $waktu_masuk_max = "07:45:00";
+            $waktu_pulang_min = "17:00:00";
+        @endphp
+
+        @if ($ket == 'out')
         <button id="takeabsen" class="btn btn-danger btn-block">
             <ion-icon name="camera-outline"></ion-icon>
             Absen Pulang
@@ -70,7 +76,6 @@
         jpeg_quality: 80,
     });
     Webcam.attach('.webcam-capture');
-
     var lokasi = document.getElementById('lokasi');
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
@@ -111,16 +116,32 @@
 
         L.marker([position.coords.latitude, position.coords.longitude]).addTo(map)
     }
-
     function errorCallback() {
-        alert('Gagal mendapatkan lokasi Anda.');
-    }
+        alert('Gagal mendapatkan lokasi Anda. Memuat peta di lokasi default (Kantor Pusat CMS).');
 
+        var map = L.map('map', {
+            attributionControl: false
+        }).setView([-7.34388593350558, 112.73523239636584], 18);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+    }
     $("#takeabsen").click(function(e) {
         Webcam.snap(function(uri) {
             image = uri;
         });
         var lokasi = $("#lokasi").val();
+        if (lokasi == "") {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Lokasi belum didapatkan. Coba lagi.',
+                icon: 'error',
+            });
+            return false;
+        }
+
         $.ajax({
             type: 'POST',
             url: '/presensi/store',

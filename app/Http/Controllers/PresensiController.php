@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 
+
 class PresensiController extends Controller
 {
     public function create()
@@ -20,109 +21,108 @@ class PresensiController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $email = Auth::guard('karyawan')->user()->email;
-        $tgl_presensi = date("Y-m-d");
-        $jam = date("H:i:s");
-        $lokasi = $request->lokasi;
+{
 
-        $lokasiuser = explode(",", $lokasi);
-        $latitudeuser = $lokasiuser[0];
-        $longitudeuser = $lokasiuser[1];
+    $email = Auth::guard('karyawan')->user()->email;
+    $tgl_presensi = date("Y-m-d");
+    $jam = date("H:i:s");
+    $lokasi = $request->lokasi;
 
-        $lokasi_kantor = [
-            ['lat' => -7.34388593350558, 'long' => 112.73523239636584, 'nama' => 'Kantor Pusat CMS'],
-            ['lat' => -7.344679449869948, 'long' => 112.73472526289694, 'nama' => 'Gerbang Tol Menanggal'],
-            ['lat' => -7.342730715106749, 'long' => 112.75809102472155, 'nama' => 'Gerbang Tol Berbek 1'],
-            ['lat' => -7.343185332266911, 'long' => 112.75237532014978, 'nama' => 'Gerbang Tol Berbek 2'],
-            ['lat' => -7.3470567753921845, 'long' => 112.78926810447702, 'nama' => 'Gerbang Tol TambakSumur 1'],
-            ['lat' => -7.346229427986888, 'long' => 112.78391129687654, 'nama' => 'Gerbang Tol TambakSumur 2'],
-            ['lat' => -7.357726813064598, 'long' => 112.80496911781243, 'nama' => 'Gerbang Tol Juanda'],
-            ['lat' => -7.497382601382557, 'long' => 112.72027988527945, 'nama' => 'Test'],
-            ['lat' => -7.32031997825219, 'long' => 112.73802915918043, 'nama' => 'Test 1'],
-        ];
+    $lokasiuser = explode(",", $lokasi);
+    $latitudeuser = $lokasiuser[0];
+    $longitudeuser = $lokasiuser[1];
 
-        $lokasi_valid = false;
-        $nama_lokasi = '';
-        foreach ($lokasi_kantor as $kantor) {
-            $jarak = $this->distance($kantor['lat'], $kantor['long'], $latitudeuser, $longitudeuser);
-            $radius = round($jarak["meters"]);
-            if ($radius <= 100) {
-                $lokasi_valid = true;
-                $nama_lokasi = $kantor['nama'];
-                break;
-            }
+    $lokasi_kantor = [
+        ['lat' => -7.34388593350558, 'long' => 112.73523239636584, 'nama' => 'Kantor Pusat CMS'],
+        ['lat' => -7.344679449869948, 'long' => 112.73472526289694, 'nama' => 'Gerbang Tol Menanggal'],
+        ['lat' => -7.342730715106749, 'long' => 112.75809102472155, 'nama' => 'Gerbang Tol Berbek 1'],
+        ['lat' => -7.343185332266911, 'long' => 112.75237532014978, 'nama' => 'Gerbang Tol Berbek 2'],
+        ['lat' => -7.3470567753921845, 'long' => 112.78926810447702, 'nama' => 'Gerbang Tol TambakSumur 1'],
+        ['lat' => -7.346229427986888, 'long' => 112.78391129687654, 'nama' => 'Gerbang Tol TambakSumur 2'],
+        ['lat' => -7.357726813064598, 'long' => 112.80496911781243, 'nama' => 'Gerbang Tol Juanda'],
+        ['lat' => -7.497382601382557, 'long' => 112.72027988527945, 'nama' => 'Test'],
+        ['lat' => -7.32031997825219, 'long' => 112.73802915918043, 'nama' => 'Test 1'],
+    ];
+
+    $lokasi_valid = false;
+    $nama_lokasi = '';
+    foreach ($lokasi_kantor as $kantor) {
+        $jarak = $this->distance($kantor['lat'], $kantor['long'], $latitudeuser, $longitudeuser);
+        $radius = round($jarak["meters"]);
+        if ($radius <= 100) {
+            $lokasi_valid = true;
+            $nama_lokasi = $kantor['nama'];
+            break;
         }
+    }
 
-        if (!$lokasi_valid) {
-            echo "error|Maaf Anda Berada di Luar Radius Lokasi Kantor|";
+    if (!$lokasi_valid) {
+        echo "error|Maaf Anda Berada di Luar Radius Lokasi Kantor|";
+        return;
+    }
+
+    $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->count();
+
+    $image = $request->image;
+    $folderPath = "public/uploads/absen/";
+    $ket = ($cek > 0) ? "out" : "in";
+    $formatName = $email . "-" . $tgl_presensi ."-". $ket;
+    $image_parts = explode(";base64", $image);
+    $image_base64 = base64_decode($image_parts[1]);
+    $fileName = $formatName . ".png";
+    $file = $folderPath . $fileName;
+
+    if ($cek > 0) {
+        $jam_pulang_minimal = "17:00:00";
+
+        if ($jam < $jam_pulang_minimal) {
+            echo "error|Anda belum bisa absen pulang. Absen pulang dibuka mulai jam 17:00.|out";
             return;
         }
 
-        $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->count();
-        if($cek > 0){
-            $ket = "out";
-        }else{
-            $ket = "in";
-        }
-        $image = $request->image;
-        $folderPath = "public/uploads/absen/";
-        $formatName = $email . "-" . $tgl_presensi ."-". $ket;
-        $image_parts = explode(";base64", $image);
-        $image_base64 = base64_decode($image_parts[1]);
-        $fileName = $formatName . ".png";
-        $file = $folderPath . $fileName;
+        $data_pulang = [
+            'jam_out' => $jam,
+            'foto_out' => $fileName,
+            'location_out' => $lokasi,
+        ];
+        $update = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->update($data_pulang);
 
-        if ($cek > 0) {
-
-            $jam_pulang_minimal = "17:00:00";
-            if ($jam < $jam_pulang_minimal) {
-                echo "error|Anda belum bisa absen pulang. Absen pulang dibuka mulai jam 17:00.|out";
-                return;
-            }
-            $data_pulang = [
-                'jam_out' => $jam,
-                'foto_out' => $fileName,
-                'location_out' => $lokasi,
-            ];
-            $update = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->update($data_pulang);
-
-            if ($update) {
-                echo "success|Anda Berhasil Absen Pulang dari $nama_lokasi|out";
-                Storage::put($file, $image_base64);
-            } else {
-                echo "error|Maaf Anda Tidak Berhasil Absen|out";
-            }
-
+        if ($update) {
+            echo "success|Anda Berhasil Absen Pulang dari $nama_lokasi|out";
+            Storage::put($file, $image_base64);
         } else {
-            $jam_masuk_mulai = "07:40:00";
-            if ($jam < $jam_masuk_mulai) {
-                echo "error|Anda belum bisa absen masuk. Absen dibuka mulai jam 07:40.|in";
-                return;
-            }
+            echo "error|Maaf Anda Tidak Berhasil Absen|out";
+        }
 
-            $jam_masuk_maksimal = "17:00:00";
-            if ($jam > $jam_masuk_maksimal) {
-                echo "error|Waktu absen masuk sudah habis. Anda tidak bisa absen masuk setelah jam 17:00.|in";
-                return;
-            }
+    } else {
+        $jam_masuk_mulai = "07:40:00";
+        $jam_masuk_maksimal_tanpa_telat = "08:00:00";
 
-            $data = [
-                'email' => $email,
-                'tgl_presensi' => $tgl_presensi,
-                'jam_in' => $jam,
-                'foto_in' => $fileName,
-                'location_in' => $lokasi,
-            ];
-            $simpan = DB::table('presensi')->insert($data);
-            if ($simpan) {
-                echo "success|Anda Berhasil Absen Masuk di $nama_lokasi|in";
-                Storage::put($file, $image_base64);
-            } else {
-                echo "error|Maaf Anda Tidak Berhasil Absen|in";
-            }
+        if ($jam < $jam_masuk_mulai) {
+            echo "error|Anda belum bisa absen masuk. Absen dibuka mulai jam 07:40.|in";
+            return;
+        }
+        if ($jam > $jam_masuk_maksimal_tanpa_telat) {
+            echo "error|Anda terlambat! Batas absen masuk adalah jam 07:45.|in";
+            return;
+        }
+        $data = [
+            'email' => $email,
+            'tgl_presensi' => $tgl_presensi,
+            'jam_in' => $jam,
+            'foto_in' => $fileName,
+            'location_in' => $lokasi,
+        ];
+        $simpan = DB::table('presensi')->insert($data);
+
+        if ($simpan) {
+            echo "success|Anda Berhasil Absen Masuk di $nama_lokasi|in";
+            Storage::put($file, $image_base64);
+        } else {
+            echo "error|Maaf Anda Tidak Berhasil Absen|in";
         }
     }
+}
 
     // Menghitung Jarak
     function distance($lat1, $lon1, $lat2, $lon2)

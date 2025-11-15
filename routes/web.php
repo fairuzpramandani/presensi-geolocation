@@ -7,17 +7,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\DepartemenController;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+use App\Http\Controllers\ForgotPasswordController;
+use App\Http\Controllers\ResetPasswordController;
 
 
 Route::middleware(['guest:karyawan'])->group(function(){
@@ -43,7 +34,6 @@ Route::middleware(['guest:user'])->group(function(){
     Route::post('/proseslogout', [AuthController::class, 'proseslogout'])->name('karyawan.logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth:karyawan');
     Route::get('/settings', [PresensiController::class, 'settings']);
-
 
     //Presensi
     Route::get('/presensi/create', [PresensiController::class, 'create']);
@@ -95,3 +85,6 @@ Route::middleware(['guest:user'])->group(function(){
 
 
 });
+    // LUPA PASSWORD KARYAWAN
+    Route::get('/ubah-password-cepat', [AuthController::class, 'showDirectResetForm'])->name('password.direct.show');
+    Route::post('/ubah-password-cepat', [AuthController::class, 'directResetPassword'])->name('password.direct.update');

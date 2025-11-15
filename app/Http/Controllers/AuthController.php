@@ -69,6 +69,44 @@ public function prosesRegisterKaryawan(Request $request)
     }
 }
 
+    public function showDirectResetForm()
+    {
+        return view('auth.passwords.reset');
+    }
+
+    public function directResetPassword(Request $request)
+    {
+        $rules = [
+            'email' => 'required|email|exists:karyawan,email',
+            'password' => 'required|string|min:5|confirmed',
+        ];
+
+        $messages = [
+            'email.exists' => 'Email ini tidak terdaftar sebagai karyawan.',
+            'password.min' => 'Password minimal 5 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+        try {
+            DB::table('karyawan')
+                ->where('email', $request->email)
+                ->update([
+                    'password' => Hash::make($request->password),
+                ]);
+
+            return redirect('/')->with('success', 'Password berhasil diubah! Silakan login dengan password baru Anda.');
+
+        } catch (\Exception $e) {
+            return back()->with('warning', 'Terjadi kesalahan saat mengubah password. Coba lagi.');
+        }
+    }
+
+
     public function proseslogin(Request $request)
     {
         if (Auth::guard('karyawan')->attempt(['email'=> $request-> email, 'password' => $request->password]))
