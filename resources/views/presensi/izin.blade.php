@@ -1,7 +1,19 @@
 @extends('layouts.presensi')
 @section('header')
+<style>
+.fab.bg-primary {
+    background-color: #0A234E !important;
+}
+.fab.bg-primary:hover,
+.fab.bg-primary:focus,
+.fab.bg-primary:active {
+    background-color: #051532 !important;
+    border-color: #051532 !important;
+    color: #fff !important;
+}
+</style>
 <!---- App Header ---->
-<div class="appHeader bg-primary text-light">
+<div class="appHeader text-light" style="background-color: #0A234E !important;">
     <div class="left">
         <a href="javascript:;" class="headerButton goBack">
             <ion-icon name= "chevron-back-outline"></ion-icon>
@@ -59,8 +71,8 @@
         </li>
     @endforeach
 </ul>
-<div class="fab-button bottom-right" style="margin-bottom:50px">
-    <a href="/presensi/buatizin" class="fab">
+<div class="fab-button bottom-right" style="margin-bottom: 50px;">
+    <a href="/presensi/buatizin" class="fab bg-primary">
         <ion-icon name="add-outline"></ion-icon>
     </a>
 </div>

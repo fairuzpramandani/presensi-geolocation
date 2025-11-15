@@ -9,6 +9,7 @@ use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\DepartemenController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
+use App\Http\Controllers\KonfigurasiController;
 
 
 Route::middleware(['guest:karyawan'])->group(function(){
@@ -83,6 +84,9 @@ Route::middleware(['guest:user'])->group(function(){
     Route::get('/presensi/rekap', [PresensiController::class, 'rekap']);
     Route::post('/presensi/cetakrekap', [PresensiController::class, 'cetakrekap']);
 
+    //Konfigurasi
+    Route::get('/konfigurasi/lokasikantor', [KonfigurasiController::class, 'lokasikantor']);
+    Route::post('/konfigurasi/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor'])->name('konfigurasi.updatelokasikantor');
 
 });
     // LUPA PASSWORD KARYAWAN

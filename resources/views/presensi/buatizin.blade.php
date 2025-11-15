@@ -1,7 +1,6 @@
 @extends('layouts.presensi')
-
 @section('header')
-<div class="appHeader bg-primary text-light">
+<div class="appHeader text-light" style="background-color: #0A234E !important;">
     <div class="left">
         <a href="javascript:;" class="headerButton goBack">
             <ion-icon name="chevron-back-outline"></ion-icon>
@@ -48,7 +47,7 @@
                 </div>
 
                 <div class="form-group mt-4">
-                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                    <button type="submit" class="btn btn-primary btn-block btn-lg" style="background-color: #0A234E !important; border-color: #0A234E !important;">
                         Kirim Pengajuan
                     </button>
                 </div>
@@ -67,6 +66,7 @@
             dateFormat: "Y-m-d",
             enableTime: false,
             minDate: "today",
+            className: "navyTheme"
         });
 
         $("#frmIzin").submit(function(){

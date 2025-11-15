@@ -1,7 +1,7 @@
 @extends('layouts.presensi')
 
 @section('header')
-<div class="appHeader bg-primary text-light">
+<div class="appHeader text-light" style="background-color: #0A234E !important;">
     <div class="left">
         <a href="javascript:;" class="headerButton goBack">
             <ion-icon name="chevron-back-outline"></ion-icon>
@@ -20,7 +20,10 @@
         height: auto !important;
         border-radius: 15px;
     }
-
+    .btn-primary {
+            background-color: #0A234E !important;
+            border-color: #0A234E !important;
+        }
     #map {
         height: 200px;
     }

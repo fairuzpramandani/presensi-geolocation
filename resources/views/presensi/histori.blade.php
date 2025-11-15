@@ -1,7 +1,22 @@
 @extends('layouts.presensi')
 @section('header')
+
+<style>
+ .btn-primary {
+    background-color: #0A234E !important;
+    border-color: #0A234E !important;
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background-color: #051532 !important;
+    border-color: #051532 !important;
+    color: #fff !important;
+}
+</style>
+
 <!---- App Header ---->
-<div class="appHeader bg-primary text-light">
+<div class="appHeader text-light" style="background-color: #0A234E !important;">
     <div class="left">
         <a href="javascript:;" class="headerButton goBack">
             <ion-icon name= "chevron-back-outline"></ion-icon>
@@ -39,10 +54,13 @@
         </div>
     </div>
     <div class="col-12">
-        <div class="form-group">
-            <button class="btn btn-primary btn btn-block" id="getdata"><ion-icon name="search-outline"></ion-icon>Search</button>
-        </div>
+    <div class="form-group">
+        <button class="btn btn-primary btn btn-block" id="getdata">
+            <ion-icon name="search-outline"></ion-icon>
+            Search
+        </button>
     </div>
+</div>
 </div>
 </div>
 <div class="row">
