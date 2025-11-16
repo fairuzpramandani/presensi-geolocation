@@ -83,10 +83,17 @@ Route::middleware(['guest:user'])->group(function(){
     Route::post('/presensi/cetaklaporan', [PresensiController::class, 'cetaklaporan']);
     Route::get('/presensi/rekap', [PresensiController::class, 'rekap']);
     Route::post('/presensi/cetakrekap', [PresensiController::class, 'cetakrekap']);
+    Route::get('/presensi/izinsakit', [PresensiController::class, 'izinsakit']);
+    Route::post('/presensi/aprrovedizinsakit', [PresensiController::class, 'approvedizinsakit']);
+    Route::get('/presensi/{id}/batalkanizinsakit', [PresensiController::class, 'batalkanizinsakit']);
 
     //Konfigurasi
     Route::get('/konfigurasi/lokasikantor', [KonfigurasiController::class, 'lokasikantor']);
-    Route::post('/konfigurasi/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor'])->name('konfigurasi.updatelokasikantor');
+    Route::post('/konfigurasi/storelokasikantor', [KonfigurasiController::class, 'storeLokasiKantor']);
+    Route::get('/konfigurasi/{id}/editlokasi', [KonfigurasiController::class, 'editLokasi']);
+    Route::put('/konfigurasi/{id}/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor']);
+    Route::delete('/konfigurasi/{id}/deletelokasi', [KonfigurasiController::class, 'deleteLokasi']);
+    Route::post('/konfigurasi/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor']);
 
 });
     // LUPA PASSWORD KARYAWAN

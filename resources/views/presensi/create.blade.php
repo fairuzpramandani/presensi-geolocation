@@ -72,6 +72,8 @@
 
 @push('myscript')
 <script>
+    const kantorList = @json($lokasi_kantor_list);
+
     Webcam.set({
         height: 480,
         width: 640,
@@ -80,6 +82,7 @@
     });
     Webcam.attach('.webcam-capture');
     var lokasi = document.getElementById('lokasi');
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
     }
@@ -95,36 +98,29 @@
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap'
         }).addTo(map);
-
-        var kantorList = [
-            { lat: -7.34388593350558, long: 112.73523239636584, nama: "Kantor Pusat CMS" },
-            { lat: -7.344679449869948, long: 112.73472526289694, nama: "Gerbang Tol Menanggal" },
-            { lat: -7.342730715106749, long: 112.75809102472155, nama: "Gerbang Tol Berbek 2" },
-            { lat: -7.3470567753921845, long: 112.78926810447702, nama: "Gerbang Tol TambakSumur 1" },
-            { lat: -7.346229427986888, long: 112.78391129687654, nama: "Gerbang Tol TambakSumur 2" },
-            { lat: -7.357726813064598, long: 112.80496911781243, nama: "Gerbang Tol Juanda" },
-            { lat: -7.497382601382557, long: 112.72027988527945, nama: "Test" },
-            { lat: -7.32031997825219, long: 112.73802915918043, nama: "Test 1" }
-
-        ];
-
         kantorList.forEach(k => {
-            L.circle([k.lat, k.long], {
+            const [lat, long] = k.lokasi_kantor.split(',');
+            const radius = k.radius || 100;
+
+            L.circle([parseFloat(lat), parseFloat(long)], {
                 color: 'red',
                 fillColor: '#f03',
                 fillOpacity: 0.3,
-                radius: 100
-            }).addTo(map).bindPopup(k.nama);
+                radius: parseInt(radius)
+            }).addTo(map).bindPopup(k.nama_lokasi);
         });
-
         L.marker([position.coords.latitude, position.coords.longitude]).addTo(map)
+             .bindPopup('Lokasi Anda Saat Ini').openPopup();
     }
+
     function errorCallback() {
-        alert('Gagal mendapatkan lokasi Anda. Memuat peta di lokasi default (Kantor Pusat CMS).');
+        alert('Gagal mendapatkan lokasi Anda. Pastikan GPS aktif dan diizinkan.');
+        const defaultLat = kantorList[0].lokasi_kantor.split(',')[0];
+        const defaultLon = kantorList[0].lokasi_kantor.split(',')[1];
 
         var map = L.map('map', {
             attributionControl: false
-        }).setView([-7.34388593350558, 112.73523239636584], 18);
+        }).setView([defaultLat, defaultLon], 18);
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,

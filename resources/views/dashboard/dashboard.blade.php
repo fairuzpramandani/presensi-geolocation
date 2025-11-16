@@ -58,7 +58,7 @@
 
     <a href="/presensi/izin" class="icon-item">
         <img src="{{ asset('assets/img/icon/izin.png') }}" alt="Izin" class="icon-image">
-        <span>Ajukan Izin</span>
+        <span>Izin & Sakit</span>
     </a>
     <a href="/presensi/histori" class="icon-item">
         <img src="{{ asset('assets/img/icon/histori.png') }}" alt="Histori" class="icon-image">

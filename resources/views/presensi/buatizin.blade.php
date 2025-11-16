@@ -6,7 +6,7 @@
             <ion-icon name="chevron-back-outline"></ion-icon>
         </a>
     </div>
-    <div class="pageTiitle">Form Izin</div>
+    <div class="pageTiitle">Form Izin & Sakit</div>
     <div class="right"></div>
 </div>
 @endsection
