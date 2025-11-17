@@ -284,60 +284,63 @@ class PresensiController extends Controller
     }
 
     public function cetaklaporan(Request $request)
-{
-    $email = $request->email;
-    $bulan = $request->bulan;
-    $tahun = $request->tahun;
-    $namabulan = ["","Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember",];
+    {
+        $email = $request->email;
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+        $namabulan = ["","Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember",];
+        $namabulan_terpilih = $namabulan[$bulan] ?? '';
 
-    if (empty($email)) {
-        return redirect()->back()->with(['warning' => 'Silakan Pilih Karyawan Terlebih Dahulu']);
-    }
+        if (empty($email)) {
+            return redirect()->back()->with(['warning' => 'Silakan Pilih Karyawan Terlebih Dahulu']);
+        }
+        $karyawan = DB::table('karyawan')
+            ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+            ->where('email', $email)
+            ->first();
 
-    $karyawan = DB::table('karyawan')
-        ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
-        ->where('email', $email)
-        ->first();
+        $presensi = DB::table('presensi')
+            ->where('email', $email)
+            ->whereRaw('MONTH(tgl_presensi)="' . $bulan . '"')
+            ->whereRaw('YEAR(tgl_presensi)="' . $tahun . '"')
+            ->orderBy('tgl_presensi')
+            ->get();
 
-    $presensi = DB::table('presensi')
-        ->where('email', $email)
-        ->whereRaw('MONTH(tgl_presensi)="' . $bulan . '"')
-        ->whereRaw('YEAR(tgl_presensi)="' . $tahun . '"')
-        ->orderBy('tgl_presensi')
-        ->get();
+        $lokasi_kantor_list = DB::table('konfigurasi_lokasi')->get();
+        foreach ($presensi as $item) {
+            $nama_lokasi_ditemukan = "Luar Radius";
 
-    $lokasi_kantor = [
-        ['lat' => -7.34388593350558, 'long' => 112.73523239636584, 'nama' => 'Kantor Pusat CMS', 'radius' => 100],
-        ['lat' => -7.344679449869948, 'long' => 112.73472526289694, 'nama' => 'Gerbang Tol Menanggal', 'radius' => 100],
-        ['lat' => -7.342730715106749, 'long' => 112.75809102472155, 'nama' => 'Gerbang Tol Berbek 1', 'radius' => 100],
-        ['lat' => -7.343185332266911, 'long' => 112.75237532014978, 'nama' => 'Gerbang Tol Berbek 2', 'radius' => 100],
-        ['lat' => -7.3470567753921845, 'long' => 112.78926810447702, 'nama' => 'Gerbang Tol TambakSumur 1', 'radius' => 100],
-        ['lat' => -7.346229427986888, 'long' => 112.78391129687654, 'nama' => 'Gerbang Tol TambakSumur 2', 'radius' => 100],
-        ['lat' => -7.357726813064598, 'long' => 112.80496911781243, 'nama' => 'Gerbang Tol Juanda', 'radius' => 100],
-        ['lat' => -7.497382601382557, 'long' => 112.72027988527945, 'nama' => 'Test', 'radius' => 100],
-        ['lat' => -7.270950525574215, 'long' => 112.74462413727203, 'nama' => 'Test 1', 'radius' => 100],
-    ];
-    foreach ($presensi as $item) {
-        $nama_lokasi_ditemukan = "Luar Radius";
+            if (!empty($item->location_in)) {
+                $lokasi_karyawan = explode(",", $item->location_in);
+                $lat_karyawan = $lokasi_karyawan[0];
+                $long_karyawan = $lokasi_karyawan[1];
+                foreach ($lokasi_kantor_list as $kantor) {
+                    $koordinat_kantor_array = explode(',', $kantor->lokasi_kantor);
+                    $lat_kantor = $koordinat_kantor_array[0];
+                    $long_kantor = $koordinat_kantor_array[1];
+                    $radius_db = $kantor->radius;
+                    $jarak = $this->distance($lat_kantor, $long_kantor, $lat_karyawan, $long_karyawan);
+                    $radius = round($jarak["meters"]);
 
-        if (!empty($item->location_in)) {
-            $lokasi_karyawan = explode(",", $item->location_in);
-            $lat_karyawan = $lokasi_karyawan[0];
-            $long_karyawan = $lokasi_karyawan[1];
-
-            foreach ($lokasi_kantor as $kantor) {
-                $jarak = $this->distance($kantor['lat'], $kantor['long'], $lat_karyawan, $long_karyawan);
-                $radius = round($jarak["meters"]);
-
-                if ($radius <= $kantor['radius']) {
-                    $nama_lokasi_ditemukan = $kantor['nama'];
-                    break;
+                    if ($radius <= $radius_db) {
+                        $nama_lokasi_ditemukan = $kantor->nama_lokasi;
+                        break;
+                    }
                 }
             }
+            $item->nama_lokasi_in = $nama_lokasi_ditemukan;
         }
-        $item->nama_lokasi_in = $nama_lokasi_ditemukan;
-    }
-    return view('presensi.cetaklaporan', compact('bulan', 'tahun','namabulan','karyawan', 'presensi'));
+
+        if (isset($_POST['exportexcel'])) {
+            $time = date("d-M-Y H:i:s");
+            $filename = "Laporan Presensi Karyawan $time.xls";
+            header("Content-type: application/vnd-ms-excel");
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+            return view('presensi.cetaklaporanexcel', compact('bulan', 'tahun', 'namabulan', 'karyawan', 'presensi'));
+
+        } else {
+            return view('presensi.cetaklaporan', compact('bulan', 'tahun', 'namabulan', 'karyawan', 'presensi'));
+        }
     }
 
     public function rekap()
@@ -403,6 +406,7 @@ class PresensiController extends Controller
             ->get()
             ->keyBy('email');
 
+
         $rekap_final = [];
 
         foreach ($semua_karyawan as $karyawan) {
@@ -422,8 +426,12 @@ class PresensiController extends Controller
                 $data_kosong->total_terlambat = 0;
                 $rekap_final[] = $data_kosong;
             }
+                if (isset($_POST['exportexcel'])) {
+                $time = date("d-M-Y H:i:s");
+                header("Content-type: application/vnd-ms-excel");
+                header("Content-Disposition: attachment; filename=Presensi Karyawan $time.xls");
+            }
         }
-
         return view('presensi.cetakrekap', [
             'rekap' => $rekap_final,
             'bulan' => $bulan,
@@ -432,26 +440,72 @@ class PresensiController extends Controller
         ]);
     }
 
-    public function izinsakit()
+    public function izinsakit(Request $request)
     {
-        $izinsakit = DB::table('pengajuan_izin')
-        ->join('karyawan', 'pengajuan_izin.email','=','karyawan.email' )
-        ->orderBy('tgl_izin', 'desc')
-        ->get();
-        return view ('presensi.izinsakit', compact('izinsakit'));
+        $dari = $request->dari;
+        $sampai = $request->sampai;
+        $email_karyawan = $request->email;
+        $nama_karyawan = $request->nama_karyawan;
+        $status_approved = $request->status_approved;
+
+       $query = DB::table('pengajuan_izin')
+        ->select('pengajuan_izin.*', 'karyawan.nama_lengkap', 'karyawan.jabatan')
+        ->join('karyawan', 'pengajuan_izin.email', '=', 'karyawan.email');
+
+        if (!empty($dari) && !empty($sampai)) {
+            $query->whereBetween('tgl_izin', [$dari, $sampai]);
+        } elseif (!empty($dari)) {
+            $query->where('tgl_izin', '>=', $dari);
+        } elseif (!empty($sampai)) {
+            $query->where('tgl_izin', '<=', $sampai);
+        }
+        if (!empty($email_karyawan)) {
+            $query->where('pengajuan_izin.email', $email_karyawan);
+        }
+        if (!empty($nama_karyawan)) {
+            $query->where('karyawan.nama_lengkap', 'like', '%' . $nama_karyawan . '%');
+        }
+        if ($status_approved !== null && $status_approved !== '') {
+            $query->where('status_approved', $status_approved);
+        }
+        $query->orderBy('tgl_izin', 'asc');
+        $izinsakit = $query->paginate(10);
+        return view('presensi.izinsakit', compact(
+            'izinsakit',
+            'dari',
+            'sampai',
+            'email_karyawan',
+            'nama_karyawan',
+            'status_approved'
+        ));
     }
 
     public function approvedizinsakit(Request $request)
     {
         $status_approved = $request->status_approved;
         $id_izinsakit_form = $request->id_izinsakit_form;
-        $update = DB::table('pengajuan_izin')->where('id', $id_izinsakit_form)->update([
-            'status_approved' => $status_approved
-        ]);
-        if($update){
-            return Redirect::back()->with(['success'=>'Data Berhasil Di Update']);
-        }else{
-            return Redirect::back()->with(['Error'=>'Data Gagal Di Update']);
+
+        if (empty($id_izinsakit_form)) {
+            return redirect()->back()->with(['warning' => 'ID Pengajuan tidak ditemukan.']);
+        }
+
+        if (!in_array($status_approved, ['1', '2'])) {
+            return redirect()->back()->with(['warning' => 'Status persetujuan tidak valid.']);
+        }
+        try {
+            $update = DB::table('pengajuan_izin')
+                ->where('id', $id_izinsakit_form)
+                ->update([
+                    'status_approved' => $status_approved
+                ]);
+            if ($update) {
+                return redirect()->back()->with(['success' => 'Status berhasil diubah!']);
+            } else {
+                return redirect()->back()->with(['warning' => 'Status tidak diubah karena nilainya sama.']);
+            }
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with(['error' => 'Gagal mengupdate status. Terjadi kesalahan database.']);
         }
     }
 
@@ -465,6 +519,16 @@ class PresensiController extends Controller
         }else {
             return Redirect::back()->with(['Error'=>'Data Gagal Di Update']);
         }
+    }
+    public function cekPengajuanIzin(Request $request)
+    {
+        $tgl_izin = $request->tgl_izin;
+        $email_karyawan = Auth::guard('karyawan')->user()->email;
+        $cek = DB::table('pengajuan_izin')
+            ->where('email', $email_karyawan)
+            ->where('tgl_izin', $tgl_izin)
+            ->count();
+        return $cek;
     }
 
 }

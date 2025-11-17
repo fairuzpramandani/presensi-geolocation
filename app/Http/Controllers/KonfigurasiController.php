@@ -87,4 +87,9 @@ class KonfigurasiController extends Controller
             return back()->with('warning', 'Gagal menghapus lokasi. Error: ' . $e->getMessage());
         }
     }
+
+    public function jamkerja()
+    {
+        return view('konfigurasi.jamkerja');
+    }
 }

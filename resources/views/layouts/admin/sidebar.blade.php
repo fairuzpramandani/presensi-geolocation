@@ -147,7 +147,8 @@
                 </a>
               </li>
               <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#navbar-base" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false" >
+                <a class="nav-link dropdown-toggle {{ request()->is(['karyawan', 'departemen']) ? 'show' : ''}} " href="#navbar-base" data-bs-toggle="dropdown"
+                    data-bs-auto-close="false" role="button" aria-expanded="{{ request()->is(['karyawan', 'departemen']) ? 'true' : ''}}" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
                         stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -163,13 +164,13 @@
                     Data Master
                   </span>
                 </a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu {{ request()->is(['karyawan', 'departemen']) ? 'show' : ''}}">
                   <div class="dropdown-menu-columns">
                     <div class="dropdown-menu-column">
-                      <a class="dropdown-item" href="/karyawan">
+                      <a class="dropdown-item {{ request()->is(['karyawan']) ? 'active' : ''}}" href="/karyawan">
                         Data Karyawan
                       </a>
-                      <a class="dropdown-item" href="/departemen">
+                      <a class="dropdown-item {{ request()->is(['departemen']) ? 'active' : ''}}" href="/departemen">
                         Data Departemen
                       </a>
                     </div>
@@ -177,7 +178,7 @@
                 </div>
               </li>
                 <li class="nav-item">
-                <a class="nav-link" href="/presensi/monitoring" >
+                <a class="nav-link {{ request()->is(['presensi/monitoring']) ? 'active' : ''}}" href="/presensi/monitoring" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-device-desktop-analytics">
@@ -198,7 +199,7 @@
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="/presensi/izinsakit" >
+                <a class="nav-link {{ request()->is(['presensi/izinsakit']) ? 'active' : ''}}" href="/presensi/izinsakit" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                             stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-report-medical">
@@ -213,8 +214,9 @@
                   </span>
                 </a>
               </li>
-              <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#navbar-base" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false" >
+              <li class="nav-item dropdown ">
+                <a class="nav-link dropdown-toggle {{ request()->is(['presensi/laporan', 'presensi/rekap']) ? 'show' : ''}}" href="#navbar-base" data-bs-toggle="dropdown"
+                    data-bs-auto-close="false" role="button" aria-expanded="{{ request()->is(['presensi/laporan', 'presensi/rekap']) ? 'true' : ''}}" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-clipboard-data"><path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -227,13 +229,13 @@
                     Laporan
                   </span>
                 </a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu {{ request()->is(['presensi/laporan', 'presensi/rekap']) ? 'show' : ''}}">
                   <div class="dropdown-menu-columns">
                     <div class="dropdown-menu-column">
-                      <a class="dropdown-item" href="/presensi/laporan">
+                      <a class="dropdown-item {{ request()->is(['presensi/laporan']) ? 'active' : ''}}" href="/presensi/laporan">
                         Laporan Presensi
                       </a>
-                      <a class="dropdown-item" href="/presensi/rekap">
+                      <a class="dropdown-item {{ request()->is(['presensi/rekap']) ? 'active' : ''}}" href="/presensi/rekap">
                         Rekap Presensi
                       </a>
                     </div>
@@ -242,7 +244,8 @@
               </li>
               </li>
               <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#navbar-base" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false" >
+                <a class="nav-link dropdown-toggle {{ request()->is(['konfigurasi', 'konfigurasi/*']) ? 'show' : ''}}" href="#navbar-base" data-bs-toggle="dropdown"
+                    data-bs-auto-close="false" role="button" aria-expanded="{{ request()->is(['konfigurasi', 'konfigurasi/*']) ? 'true' : ''}}" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-settings"><path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -257,11 +260,18 @@
                     Konfigurasi
                   </span>
                 </a>
-                <div class="dropdown-menu">
+                <div class="dropdown-menu {{ request()->is(['konfigurasi', 'konfigurasi/*']) ? 'show' : ''}}">
                   <div class="dropdown-menu-columns">
                     <div class="dropdown-menu-column">
-                      <a class="dropdown-item" href="/konfigurasi/lokasikantor">
+                      <a class="dropdown-item {{ request()->is(['konfigurasi/lokasikantor']) ? 'active' : ''}}" href="/konfigurasi/lokasikantor">
                         Lokasi Kantor
+                      </a>
+                    </div>
+                  </div>
+                  <div class="dropdown-menu-columns">
+                    <div class="dropdown-menu-column">
+                      <a class="dropdown-item {{ request()->is(['konfigurasi/jamkerja']) ? 'active' : ''}}" href="/konfigurasi/jamkerja">
+                        Jam Kerja
                       </a>
                     </div>
                   </div>

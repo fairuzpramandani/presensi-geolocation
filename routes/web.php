@@ -19,13 +19,6 @@ Route::middleware(['guest:karyawan'])->group(function(){
     Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
 });
 
-Route::middleware(['guest:user'])->group(function(){
-    Route::get('/panel', function () {
-        return view('auth.loginadmin');
-    })->name('loginadmin');
-    Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
-});
-
 // LOGIN KARYAWAN
     Route::get('/', [AuthController::class, 'showLoginKaryawan'])->name('login');
     Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
@@ -39,6 +32,7 @@ Route::middleware(['guest:user'])->group(function(){
     //Presensi
     Route::get('/presensi/create', [PresensiController::class, 'create']);
     Route::post('/presensi/store', [PresensiController::class, 'store'])->name('presensi.store')->middleware('auth:karyawan');
+    Route::post('/presensi/cekpengajuanizin', [PresensiController::class, 'cekPengajuanIzin']);
 
     //Edit Profile
     Route::get('/editprofile', [PresensiController::class,'editprofile']);
@@ -52,6 +46,17 @@ Route::middleware(['guest:user'])->group(function(){
     Route::get('/presensi/izin', [PresensiController::class, 'izin']);
     Route::get('/presensi/buatizin', [PresensiController::class, 'buatizin']);
     Route::post('/presensi/storeizin', [PresensiController::class, 'storeizin']);
+});
+
+    // LUPA PASSWORD KARYAWAN
+    Route::get('/ubah-password-cepat', [AuthController::class, 'showDirectResetForm'])->name('password.direct.show');
+    Route::post('/ubah-password-cepat', [AuthController::class, 'directResetPassword'])->name('password.direct.update');
+
+Route::middleware(['guest:user'])->group(function(){
+    Route::get('/panel', function () {
+        return view('auth.loginadmin');
+    })->name('loginadmin');
+    Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
 });
 
 // LOGIN ADMIN
@@ -94,8 +99,6 @@ Route::middleware(['guest:user'])->group(function(){
     Route::put('/konfigurasi/{id}/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor']);
     Route::delete('/konfigurasi/{id}/deletelokasi', [KonfigurasiController::class, 'deleteLokasi']);
     Route::post('/konfigurasi/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor']);
+    Route::get('/konfigurasi/jamkerja', [KonfigurasiController::class, 'jamkerja']);
 
 });
-    // LUPA PASSWORD KARYAWAN
-    Route::get('/ubah-password-cepat', [AuthController::class, 'showDirectResetForm'])->name('password.direct.show');
-    Route::post('/ubah-password-cepat', [AuthController::class, 'directResetPassword'])->name('password.direct.update');
