@@ -13,61 +13,71 @@ class AuthController extends Controller
 {
 
     public function showRegisterPage()
-{
-    $departemen = DB::table('departemen')->get();
-    return view('auth.register', compact('departemen'));
-}
-public function showLoginKaryawan()
-{
-    return view('auth.login');
-}
-
-public function prosesRegisterKaryawan(Request $request)
-{
-    $rules = [
-        'nama_lengkap' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:karyawan,email',
-        'jabatan' => 'required|string|max:50',
-        'no_hp' => 'required|string|max:15',
-        'kode_dept' => 'required|string|exists:departemen,kode_dept',
-        'password' => 'required|string|min:5|confirmed',
-    ];
-    $messages = [
-        'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
-        'email.required' => 'Email wajib diisi.',
-        'email.email' => 'Format email tidak valid.',
-        'email.unique' => 'Email ini sudah terdaftar.',
-        'jabatan.required' => 'Jabatan wajib diisi.',
-        'no_hp.required' => 'No. HP wajib diisi.',
-        'kode_dept.required' => 'Departemen wajib dipilih.',
-        'kode_dept.exists' => 'Departemen tidak valid.',
-        'password.required' => 'Password wajib diisi.',
-        'password.min' => 'Password minimal 5 karakter.',
-        'password.confirmed' => 'Konfirmasi password tidak cocok.',
-    ];
-    $validator = Validator::make($request->all(), $rules, $messages);
-    if ($validator->fails()) {
-        return redirect('/register')
-                    ->withErrors($validator)
-                    ->withInput();
+    {
+        $departemen = DB::table('departemen')->get();
+        $jam_kerja = DB::table('jam_kerja')->orderBy('nama_jam_kerja')->get();
+        return view('auth.register', compact('departemen', 'jam_kerja'));
     }
-    try {
-        DB::table('karyawan')->insert([
-            'nama_lengkap' => $request->nama_lengkap,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'jabatan' => $request->jabatan,
-            'no_hp' => $request->no_hp,
-            'kode_dept' => $request->kode_dept
-        ]);
-        return redirect('/')->with('success', 'Akun berhasil dibuat! Silakan login.');
-
-    } catch (\Exception $e) {
-        return redirect('/register')
-                    ->with('warning', $e->getMessage())
-                    ->withInput();
+    public function showLoginKaryawan()
+    {
+        return view('auth.login');
     }
-}
+
+    public function prosesRegisterKaryawan(Request $request)
+    {
+        $rules = [
+            'nama_lengkap' => 'required|string|max:255',
+            'email'        => 'required|string|email|max:255|unique:karyawan,email',
+            'jabatan'      => 'required|string|max:50',
+            'no_hp'        => 'required|string|max:15',
+            'kode_dept'    => 'required|string|exists:departemen,kode_dept',
+            'kode_jam_kerja' => 'required|string|exists:jam_kerja,kode_jam_kerja',
+            'password'     => 'required|string|min:5|confirmed',
+        ];
+
+        $messages = [
+            'nama_lengkap.required'   => 'Nama lengkap wajib diisi.',
+            'email.required'          => 'Email wajib diisi.',
+            'email.email'             => 'Format email tidak valid.',
+            'email.unique'            => 'Email ini sudah terdaftar.',
+            'jabatan.required'        => 'Jabatan wajib diisi.',
+            'no_hp.required'          => 'No. HP wajib diisi.',
+            'kode_dept.required'      => 'Departemen wajib dipilih.',
+            'kode_dept.exists'        => 'Departemen tidak valid.',
+            'kode_jam_kerja.required' => 'Jam Kerja wajib dipilih.',
+            'kode_jam_kerja.exists'   => 'Data Jam Kerja tidak ditemukan.',
+            'password.required'       => 'Password wajib diisi.',
+            'password.min'            => 'Password minimal 5 karakter.',
+            'password.confirmed'      => 'Konfirmasi password tidak cocok.',
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            return redirect('/register')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            DB::table('karyawan')->insert([
+                'nama_lengkap'   => $request->nama_lengkap,
+                'email'          => $request->email,
+                'password'       => Hash::make($request->password),
+                'jabatan'        => $request->jabatan,
+                'no_hp'          => $request->no_hp,
+                'kode_dept'      => $request->kode_dept,
+                'kode_jam_kerja' => $request->kode_jam_kerja
+            ]);
+
+            return redirect('/')->with('success', 'Akun berhasil dibuat! Silakan login.');
+
+        } catch (\Exception $e) {
+            return redirect('/register')
+                ->with('warning', 'Terjadi kesalahan: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
 
     public function showDirectResetForm()
     {

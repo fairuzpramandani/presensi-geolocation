@@ -5,7 +5,7 @@
           </button>
           <h1 class="navbar-brand navbar-brand-autodark">
             <a href=".">
-              <img src="{{ asset('tabler/static/logo-white.svg') }}" width="110" height="32" alt="Tabler" class="navbar-brand-image">
+             <img src="{{ asset('assets/img/login/cms-hadir.png') }}" alt="CMS Presensi" class="navbar-brand-image" style="height: 7rem !important; width: auto;">
             </a>
           </h1>
           <div class="navbar-nav flex-row d-lg-none">
@@ -129,9 +129,9 @@
             </div>
           </div>
           <div class="collapse navbar-collapse" id="sidebar-menu">
-            <ul class="navbar-nav pt-lg-3">
+            <ul class="navbar-nav pt-lg-0">
               <li class="nav-item">
-                <a class="nav-link" href="./" >
+                <a class="nav-link" href="/panel/dashboardadmin" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
                         stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">

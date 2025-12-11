@@ -6,7 +6,7 @@
             <ion-icon name="chevron-back-outline"></ion-icon>
         </a>
     </div>
-    <div class="pageTitle">Settings</div>
+    <div class="pageTitle">Profile</div>
     <div class="right"></div>
 </div>
 @endsection

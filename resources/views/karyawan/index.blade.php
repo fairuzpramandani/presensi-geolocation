@@ -62,6 +62,7 @@
                                             </select>
                                         </div>
                                     </div>
+
                                     <div class="col-2">
                                         <div class="form-group">
                                             <button type="submit" class="btn btn-primary">
@@ -240,6 +241,16 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <select name="kode_jam_kerja" id="kode_jam_kerja" class="form-select">
+                                    <option value="">Pilih Jam Kerja</option>
+                                    @foreach ($jam_kerja as $j)
+                                        <option value="{{ $j->kode_jam_kerja }}">{{ $j->nama_jam_kerja }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     <div class="row mt-2">
                         <div class="col-12">
                         <div class="form-group">
@@ -347,6 +358,7 @@
                 var jabatan = $("#jabatan").val();
                 var no_hp = $("#no_hp").val();
                 var kode_dept = $("#frmKaryawan").find("#kode_dept").val();
+                var kode_jam_kerja = $("#frmKaryawan").find("#kode_jam_kerja").val();
                 if (email=="")
                 {
                     Swal.fire({
@@ -405,6 +417,16 @@
                     }).then((result)=>
                     {
                         $("#frmKaryawan").find("#kode_dept").focus()
+                    });
+                    return false;
+                }else if (kode_jam_kerja == "") {
+                    Swal.fire({
+                        title: 'Peringatan!',
+                        text: 'Jam Kerja Harus Diisi !',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        $("#frmKaryawan").find("#kode_jam_kerja").focus()
                     });
                     return false;
                 }
