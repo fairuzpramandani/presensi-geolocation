@@ -26,7 +26,7 @@
 
         <div class="login-form mt-1">
             <div class="section">
-                <img src="{{ asset('assets/img/login/login.png') }}" alt="image" class="form-image">
+                <img src="{{ asset('assets/img/login/cms-hadir.png') }}" alt="image" class="form-image">
             </div>
             <div class="section mt-1">
                 <h1>Buat Akun Karyawan</h1>
@@ -83,6 +83,18 @@
                                 @foreach ($departemen as $d)
                                     <option value="{{ $d->kode_dept }}" {{ old('kode_dept') == $d->kode_dept ? 'selected' : '' }}>
                                         {{ $d->nama_dept }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group boxed">
+                        <div class="input-wrapper">
+                            <select class="form-control" name="kode_jam_kerja" id="kode_jam_kerja" required>
+                                <option value="">Pilih Jam Kerja</option>
+                                @foreach ($jam_kerja as $jk)
+                                    <option value="{{ $jk->kode_jam_kerja }}" {{ old('kode_jam_kerja') == $jk->kode_jam_kerja ? 'selected' : '' }}>
+                                        {{ $jk->nama_jam_kerja }} ({{ $jk->jam_masuk }} - {{ $jk->jam_pulang }})
                                     </option>
                                 @endforeach
                             </select>

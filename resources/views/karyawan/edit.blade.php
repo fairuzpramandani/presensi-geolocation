@@ -50,9 +50,9 @@
             <div class="input-icon mb-3">
                 <span class="input-icon-addon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-phone">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-phone">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />
                     </svg>
                 </span>
                 <input type="text" value="{{ $karyawan->no_hp }}" id="no_hp" class="form-control" name="no_hp" placeholder="No. HP">
@@ -63,33 +63,49 @@
     <div class="row">
         <div class="col-12">
             <div class="input-icon mb-3">
-                    <span class="input-icon-addon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /><path d="M12 16m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M8 11v-4a4 4 0 0 1 8 0v4" />
-                        </svg>
-                    </span>
-                <input type="password" value="" id="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin ganti password">
+                <span class="input-icon-addon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" /><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg>
+                </span>
+                <input type="password" id="password" class="form-control" name="password" placeholder="Kosongkan jika tidak ingin ganti password">
             </div>
         </div>
     </div>
 
     <div class="row mt-2">
         <div class="col-12">
-                <input type="file" name="foto" class="form-control">
+            <input type="file" name="foto" class="form-control">
+            <input type="hidden" name="old_foto" value="{{ $karyawan->foto }}">
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <select name="kode_dept" id="kode_dept" class="form-select">
+                <option value="">Jabatan</option>
+                @foreach ($departemen as $d)
+                    <option {{ $karyawan->kode_dept == $d->kode_dept ? 'selected' : '' }} value="{{ $d->kode_dept }}">{{ $d->nama_dept }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="form-group">
+                <select name="kode_jam_kerja" class="form-select">
+                    <option value="">Pilih Jam Kerja</option>
+                    @foreach ($jam_kerja as $j)
+                        <option value="{{ $j->kode_jam_kerja }}"
+                            {{ $karyawan->kode_jam_kerja == $j->kode_jam_kerja ? 'selected' : '' }}>
+                            {{ $j->nama_jam_kerja }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
         </div>
-            <div class="row mt-2">
-                <div class="col-12">
-                    <select name="kode_dept" id="kode_dept" class="form-select">
-                        <option value="">Departemen</option>
-                        @foreach ($departemen as $d)
-                            <option {{ $karyawan->kode_dept == $d->kode_dept ? 'selected' : '' }} value="{{ $d->kode_dept }}">{{ $d->nama_dept }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-        <div class="row mt-2">
-            <div class="col-12">
+    </div>
+    <div class="row mt-2">
+        <div class="col-12">
             <div class="form-group">
                 <button class="btn btn-primary w-100">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -99,8 +115,9 @@
                         -.568l2.468 -7.274l-2.468 -7.274a.555 .555 0 0 1 .12 -.568a.503 .503 0 0 1 .546 -.124z" />
                         <path d="M6.5 12h14.5" />
                     </svg>
-                    Simpan
+                    Simpan Perubahan
                 </button>
             </div>
         </div>
-    </form>
+    </div>
+</form>

@@ -17,21 +17,18 @@
 <div class="greeting-text text-center mb-3">
     <h2 class="mb-0">
         @php
-            $waktu_masuk_max = "07:45:00";
-            $waktu_pulang_min = "17:00:00";
+            $waktu_masuk_max = $jam_kerja_user->akhir_jam_masuk ?? "08:00:00";
+            $waktu_pulang_min = $jam_kerja_user->jam_pulang ?? "17:00:00";
 
             $hour = date('H');
             $greeting = "Selamat Datang";
             if ($hour >= 4 && $hour < 12) {
                 $greeting = "Selamat Pagi";
-            }
-            elseif ($hour >= 12 && $hour < 15) {
+            } elseif ($hour >= 12 && $hour < 15) {
                 $greeting = "Selamat Siang";
-            }
-            elseif ($hour >= 15 && $hour < 18) {
+            } elseif ($hour >= 15 && $hour < 18) {
                 $greeting = "Selamat Sore";
-            }
-            else {
+            } else {
                 $greeting = "Selamat Malam";
             }
         @endphp
@@ -43,7 +40,6 @@
 
 
 <div class="icon-grid">
-
     <a href="/presensi/create?ket=in" class="icon-item"
        onclick="return checkAbsenTime('{{ $waktu_masuk_max }}', 'in')">
         <img src="{{ asset('assets/img/icon/absen-masuk.png') }}" alt="Absen Masuk" class="icon-image">
@@ -64,15 +60,16 @@
         <img src="{{ asset('assets/img/icon/histori.png') }}" alt="Histori" class="icon-image">
         <span>Histori</span>
     </a>
-
 </div>
 
 <div style="height: 100px;"></div>
 
 @endsection
+
 @push('css')
 <link rel="stylesheet" href="{{ asset('assets/css/dashboardcustom.css') }}">
 @endpush
+
 @push('scripts')
 <script>
     function checkAbsenTime(batasWaktu, jenisAbsen) {
@@ -80,11 +77,11 @@
         var currentTime = now.toTimeString().split(' ')[0];
         var waktuDisplay = batasWaktu.substring(0, 5);
 
-        /*if (jenisAbsen === 'in') {
+       /* if (jenisAbsen === 'in') {
             if (currentTime > batasWaktu) {
                 Swal.fire({
                     title: 'Waktu Habis!',
-                    text: 'Absen Masuk hanya bisa dilakukan sebelum jam ' + waktuDisplay + ' WIB.',
+                    text: 'Batas waktu Absen Masuk (' + waktuDisplay + ') sudah terlewat!',
                     icon: 'warning',
                 });
                 return false;
@@ -93,7 +90,7 @@
             if (currentTime < batasWaktu) {
                 Swal.fire({
                     title: 'Belum Waktunya!',
-                    text: 'Absen Pulang bisa dilakukan setelah jam ' + waktuDisplay + ' WIB.',
+                    text: 'Absen Pulang baru bisa dilakukan mulai jam ' + waktuDisplay + ' WIB.',
                     icon: 'warning',
                 });
                 return false;

@@ -109,7 +109,6 @@
                 </div>
               </a>
               <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
-                <a href="./settings.html" class="dropdown-item">Settings</a>
                 <a href="#" class="dropdown-item" onclick="event.preventDefault(); document.getElementById('admin-logout-form').submit();">
                     Logout
                 </a>

@@ -12,19 +12,16 @@ use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\KonfigurasiController;
 
 
+// LOGIN & REGISTER KARYAWAN (Hanya untuk Tamu/Guest)
 Route::middleware(['guest:karyawan'])->group(function(){
-    Route::get('/', function () {
-        return view('auth.login');
-    })->name('login');
-    Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
-});
-
-// LOGIN KARYAWAN
     Route::get('/', [AuthController::class, 'showLoginKaryawan'])->name('login');
     Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
     Route::get('/register', [AuthController::class, 'showRegisterPage']);
     Route::post('/prosesregister', [AuthController::class, 'prosesRegisterKaryawan']);
-    Route::middleware(['auth:karyawan'])->group(function(){
+});
+
+// ROUTE KARYAWAN (Harus Login)
+Route::middleware(['auth:karyawan'])->group(function(){
     Route::post('/proseslogout', [AuthController::class, 'proseslogout'])->name('karyawan.logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth:karyawan');
     Route::get('/settings', [PresensiController::class, 'settings']);
@@ -53,15 +50,16 @@ Route::middleware(['guest:karyawan'])->group(function(){
     Route::post('/ubah-password-cepat', [AuthController::class, 'directResetPassword'])->name('password.direct.update');
 
 Route::middleware(['guest:user'])->group(function(){
-    Route::get('/panel', function () {
-        return view('auth.loginadmin');
-    })->name('loginadmin');
+    Route::get('/panel', function () { return view('auth.loginadmin'); })->name('loginadmin');
     Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
 });
 
-// LOGIN ADMIN
+// ROUTE ADMIN (Harus Login)
+Route::middleware(['auth:user'])->group(function () {
+    // Anda sudah memiliki route group di bawah, jadi ini tidak perlu
+    // Route::post('/prosesregisteradmin', [AuthController::class, 'registerAdmin']);
+
     Route::post('/prosesregisteradmin', [AuthController::class, 'registerAdmin']);
-    Route::middleware(['auth:user'])->group(function () {
     Route::get('/proseslogoutadmin',[AuthController::class, 'proseslogoutadmin']);
     Route::post('/proseslogoutadmin', [AuthController::class, 'proseslogoutadmin'])->name('admin.logout');
     Route::get('/panel/dashboardadmin',[DashboardController::class, 'dashboardadmin']);
@@ -100,5 +98,8 @@ Route::middleware(['guest:user'])->group(function(){
     Route::delete('/konfigurasi/{id}/deletelokasi', [KonfigurasiController::class, 'deleteLokasi']);
     Route::post('/konfigurasi/updatelokasikantor', [KonfigurasiController::class, 'updateLokasiKantor']);
     Route::get('/konfigurasi/jamkerja', [KonfigurasiController::class, 'jamkerja']);
-
+    Route::post('/konfigurasi/storejamkerja', [KonfigurasiController::class, 'storejamkerja']);
+    Route::post('/konfigurasi/editjamkerja', [KonfigurasiController::class, 'editjamkerja']);
+    Route::post('/konfigurasi/updatejamkerja', [KonfigurasiController::class, 'updatejamkerja']);
+    Route::post('/konfigurasi/{kode_jam_kerja}/delete', [KonfigurasiController::class, 'deletejamkerja']);
 });

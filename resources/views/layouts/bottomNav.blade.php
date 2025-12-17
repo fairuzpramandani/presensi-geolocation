@@ -21,8 +21,8 @@
         </a>
         <a href="/settings" class="item {{ request()->is('settings', 'editprofile') ? 'active' : '' }}">
         <div class="col">
-            <ion-icon name="settings-outline"></ion-icon>
-            <strong>Settings</strong>
+            <ion-icon name="person-outline"></ion-icon>
+            <strong>Profile</strong>
         </div>
         </a>
     </div>
