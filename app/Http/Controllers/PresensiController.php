@@ -172,6 +172,15 @@ class PresensiController extends Controller
         }
     }
 
+    public function getLokasiKantor()
+    {
+        $lokasi = DB::table('konfigurasi_lokasi')->get();
+        return response()->json([
+            'status' => 'success',
+            'data' => $lokasi
+        ]);
+    }
+
     // Menghitung Jarak
     function distance($lat1, $lon1, $lat2, $lon2)
     {
@@ -185,6 +194,26 @@ class PresensiController extends Controller
         return compact('meters');
     }
 
+    public function getprofile($email)
+    {
+        $user = DB::table('karyawan')
+            ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+            ->where('karyawan.email', $email)
+            ->select('karyawan.*', 'departemen.nama_dept')
+            ->first();
+
+        if ($user) {
+            return response()->json([
+                'status' => true,
+                'data' => $user
+            ], 200);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'User tidak ditemukan.'
+        ], 404);
+    }
 
     public function editprofile()
     {
@@ -193,38 +222,57 @@ class PresensiController extends Controller
         return view('presensi.editprofile', compact('karyawan'));
     }
 
-    public function updateprofile(Request $request)
+    public function updateprofile(Request $request, $email = null)
     {
-        $email = Auth::guard('karyawan')->user()->email;
+        $userEmail = $email ?? Auth::guard('karyawan')->user()->email;
         $nama_lengkap = $request->nama_lengkap;
         $no_hp = $request->no_hp;
         $password = $request->password;
+        $karyawan = DB::table('karyawan')->where('email', $userEmail)->first();
 
-        $karyawan = DB::table('karyawan')->where('email', $email)->first();
         $data = [
             'nama_lengkap' => $nama_lengkap,
-            'no_hp' => $no_hp
+            'no_hp' => $no_hp,
         ];
         if (!empty($password)) {
             $data['password'] = Hash::make($password);
         }
         if ($request->hasFile('foto')) {
-            $safeEmail = str_replace(['@', '.'], '_', $email);
-            $foto = $safeEmail . "." . $request->file('foto')->getClientOriginalExtension();
-            $data['foto'] = $foto;
-        } else {
-            $foto = $karyawan->foto;
+            $safeEmail = str_replace(['@', '.'], '_', $userEmail);
+            $fotoName = $safeEmail . "." . $request->file('foto')->getClientOriginalExtension();
+            $folderPath = "public/uploads/karyawan/";
+            $request->file('foto')->storeAs($folderPath, $fotoName);
+            $data['foto'] = $fotoName;
         }
-        $update = DB::table('karyawan')->where('email', $email)->update($data);
-
-        if ($update) {
-            if ($request->hasFile('foto')) {
-                $folderPath = "public/uploads/karyawan/";
-                $request->file('foto')->storeAs($folderPath, $foto);
+        elseif (!empty($request->foto) && is_string($request->foto)) {
+            $foto_base64 = $request->foto;
+            if (str_contains($foto_base64, ',')) {
+                $foto_base64 = explode(',', $foto_base64)[1];
             }
+
+            $image = base64_decode($foto_base64);
+            $safeEmail = str_replace(['@', '.'], '_', $userEmail);
+            $fotoName = $safeEmail . "_" . time() . ".png";
+            $folderPath = "public/uploads/karyawan/";
+
+            Storage::put($folderPath . $fotoName, $image);
+            $data['foto'] = $fotoName;
+            if ($karyawan->foto && Storage::exists($folderPath . $karyawan->foto)) {
+                Storage::delete($folderPath . $karyawan->foto);
+            }
+        }
+        $update = DB::table('karyawan')->where('email', $userEmail)->update($data);
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Profil berhasil diperbarui'
+            ], 200);
+        }
+
+        if ($update || isset($data['foto'])) {
             return redirect('/settings')->with(['success' => 'Profil berhasil Di Update']);
         } else {
-            return redirect()->back()->with(['error' => 'Gagal Update Profil']);
+            return redirect()->back()->with(['error' => 'Gagal Update Profil atau Tidak Ada Perubahan']);
         }
     }
 
@@ -255,6 +303,28 @@ class PresensiController extends Controller
         return view('presensi.gethistori', compact('histori'));
     }
 
+    public function getHistoriApi(Request $request)
+    {
+        $token = $request->bearerToken();
+        $user = DB::table('karyawan')->where('remember_token', $token)->first();
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+        $histori = DB::table('presensi')
+            ->whereRaw('MONTH(tgl_presensi) = ?', [$bulan])
+            ->whereRaw('YEAR(tgl_presensi) = ?', [$tahun])
+            ->where('email', $user->email)
+            ->orderBy('tgl_presensi')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $histori
+        ]);
+    }
+
     public function izin()
     {
         $email = Auth::guard('karyawan')->user()->email;
@@ -269,26 +339,75 @@ class PresensiController extends Controller
 
     public function storeizin(Request $request)
     {
-        $email = Auth::guard('karyawan')->user()->email;
+        $user = Auth::guard('karyawan')->user();
+        if (!$user) {
+            $token = $request->bearerToken();
+            $user = DB::table('karyawan')->where('remember_token', $token)->first();
+        }
+        if (!$user) {
+            if ($request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+            }
+            return redirect('/')->with(['warning' => 'Anda harus login terlebih dahulu']);
+        }
+
+        $email = $user->email;
         $tgl_izin = $request->tgl_izin;
         $status = $request->status;
         $keterangan = $request->keterangan;
+        $cek = DB::table('pengajuan_izin')
+            ->where('email', $email)
+            ->where('tgl_izin', $tgl_izin)
+            ->count();
 
+        if ($cek > 0) {
+            if ($request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Anda sudah mengajukan pada tanggal ini!']);
+            }
+            return redirect('/presensi/izin')->with(['error' => 'Anda Sudah Melakukan Input Pengajuan Izin Pada Tanggal Tersebut !']);
+        }
         $data = [
             'email' => $email,
             'tgl_izin' => $tgl_izin,
             'status' => $status,
-            'keterangan' => $keterangan
+            'keterangan' => $keterangan,
+            'status_approved' => 0
         ];
 
         $simpan = DB::table('pengajuan_izin')->insert($data);
-
         if($simpan){
+            if ($request->wantsJson()) {
+                return response()->json(['status' => 'success', 'message' => 'Data Berhasil Disimpan']);
+            }
             return redirect('/presensi/izin')->with(['success'=>'Data Berhasil Disimpan']);
         }else{
+            if ($request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Data Gagal Disimpan']);
+            }
             return redirect('/presensi/izin')->with(['Error'=>'Data Gagal Disimpan']);
         }
     }
+
+    public function getizin(Request $request)
+    {
+        $token = $request->bearerToken();
+        $user = DB::table('karyawan')->where('remember_token', $token)->first();
+
+        if (!$user) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 401);
+        }
+
+        $dataizin = DB::table('pengajuan_izin')
+            ->where('email', $user->email)
+            ->orderBy('tgl_izin', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $dataizin
+        ]);
+    }
+
     public function monitoring()
     {
         return view('presensi.monitoring');

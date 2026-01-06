@@ -23,6 +23,12 @@ class DepartemenController extends Controller
         return view('departemen.index', compact('departemen'));
     }
 
+    public function listDepartemenJson()
+    {
+        $departemen = \DB::table('departemen')->get();
+        return response()->json($departemen);
+    }
+
     public function store(Request $request)
     {
         $kode_dept = $request->kode_dept;

@@ -12,7 +12,7 @@ use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\KonfigurasiController;
 
 
-// LOGIN & REGISTER KARYAWAN (Hanya untuk Tamu/Guest)
+// LOGIN & REGISTER KARYAWAN
 Route::middleware(['guest:karyawan'])->group(function(){
     Route::get('/', [AuthController::class, 'showLoginKaryawan'])->name('login');
     Route::post('/proseslogin', [AuthController::class, 'proseslogin']);
@@ -20,7 +20,7 @@ Route::middleware(['guest:karyawan'])->group(function(){
     Route::post('/prosesregister', [AuthController::class, 'prosesRegisterKaryawan']);
 });
 
-// ROUTE KARYAWAN (Harus Login)
+// ROUTE KARYAWAN
 Route::middleware(['auth:karyawan'])->group(function(){
     Route::post('/proseslogout', [AuthController::class, 'proseslogout'])->name('karyawan.logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth:karyawan');
@@ -33,7 +33,7 @@ Route::middleware(['auth:karyawan'])->group(function(){
 
     //Edit Profile
     Route::get('/editprofile', [PresensiController::class,'editprofile']);
-    Route::post('/presensi/{email}/updateprofile', [PresensiController::class, 'updateprofile']);
+    Route::post('/presensi/{email}/updateprofile', [PresensiController::class, 'updateprofile'])->name('profile.update.web')->where('email', '.*');
 
     //Histori
     Route::get('/presensi/histori', [PresensiController::class,'histori']);
@@ -43,23 +43,43 @@ Route::middleware(['auth:karyawan'])->group(function(){
     Route::get('/presensi/izin', [PresensiController::class, 'izin']);
     Route::get('/presensi/buatizin', [PresensiController::class, 'buatizin']);
     Route::post('/presensi/storeizin', [PresensiController::class, 'storeizin']);
+
+
 });
 
     // LUPA PASSWORD KARYAWAN
     Route::get('/ubah-password-cepat', [AuthController::class, 'showDirectResetForm'])->name('password.direct.show');
     Route::post('/ubah-password-cepat', [AuthController::class, 'directResetPassword'])->name('password.direct.update');
 
+    //Departemen Flutter
+    Route::get('/departemen-list', [DepartemenController::class, 'listDepartemenJson']);
+
+    //Jam Kerja Flutter
+    Route::get('/jam-kerja-list', [KonfigurasiController::class, 'listJamKerjaJson']);
+
+    //Profile Flutter
+    Route::get('/getprofile/{email}', [PresensiController::class, 'getprofile'])->where('email', '.*');
+    Route::post('/api/profile/update/{email}', [PresensiController::class, 'updateprofile'])->where('email', '.*');
+
+    //Lokasi Flutter
+    Route::get('/api/konfigurasi-lokasi', [PresensiController::class, 'getLokasiKantor']);
+
+    //Izin Sakit
+    Route::get('/api/presensi/izin', [PresensiController::class, 'getizin']);
+    Route::post('/api/presensi/storeizin', [PresensiController::class, 'storeizin']);
+
+    //Histori
+    Route::post('/api/presensi/histori', [PresensiController::class, 'getHistoriApi']);
+
 Route::middleware(['guest:user'])->group(function(){
     Route::get('/panel', function () { return view('auth.loginadmin'); })->name('loginadmin');
     Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
+    Route::post('/prosesregisteradmin', [AuthController::class, 'registerAdmin']);
 });
 
 // ROUTE ADMIN (Harus Login)
 Route::middleware(['auth:user'])->group(function () {
-    // Anda sudah memiliki route group di bawah, jadi ini tidak perlu
-    // Route::post('/prosesregisteradmin', [AuthController::class, 'registerAdmin']);
 
-    Route::post('/prosesregisteradmin', [AuthController::class, 'registerAdmin']);
     Route::get('/proseslogoutadmin',[AuthController::class, 'proseslogoutadmin']);
     Route::post('/proseslogoutadmin', [AuthController::class, 'proseslogoutadmin'])->name('admin.logout');
     Route::get('/panel/dashboardadmin',[DashboardController::class, 'dashboardadmin']);
@@ -77,6 +97,7 @@ Route::middleware(['auth:user'])->group(function () {
     Route::post('/departemen/edit', [DepartemenController::class, 'edit']);
     Route::post('/departemen/{kode_dept}/update', [DepartemenController::class, 'update']);
     Route::post('/departemen/{kode_dept}/delete', [DepartemenController::class, 'delete']);
+
 
     //Presensi
     Route::get('/presensi/monitoring', [PresensiController::class, 'monitoring']);
