@@ -20,6 +20,7 @@ class KonfigurasiController extends Controller
         $lokasi_kantor_list = $query->get();
         return view('konfigurasi.lokasikantor', compact('lokasi_kantor_list'));
     }
+    
     public function storeLokasiKantor(Request $request)
     {
         $koordinat_kantor = $request->lokasi_kantor;
@@ -120,6 +121,13 @@ class KonfigurasiController extends Controller
             return Redirect::back()->with(['warning' => 'Data Gagal Disimpan']);
         }
     }
+
+    public function listJamKerjaJson()
+    {
+        $jam_kerja = \DB::table('jam_kerja')->get();
+        return response()->json($jam_kerja);
+    }
+
     public function editjamkerja(Request $request)
     {
         $kode_jam_kerja = $request->kode_jam_kerja;

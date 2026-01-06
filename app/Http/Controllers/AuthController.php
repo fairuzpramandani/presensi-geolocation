@@ -54,6 +54,12 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
             return redirect('/register')
                 ->withErrors($validator)
                 ->withInput();
@@ -69,10 +75,21 @@ class AuthController extends Controller
                 'kode_dept'      => $request->kode_dept,
                 'kode_jam_kerja' => $request->kode_jam_kerja
             ]);
-
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Akun berhasil dibuat! Silakan login.'
+                ], 200);
+            }
             return redirect('/')->with('success', 'Akun berhasil dibuat! Silakan login.');
 
         } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                ], 500);
+            }
             return redirect('/register')
                 ->with('warning', 'Terjadi kesalahan: ' . $e->getMessage())
                 ->withInput();
@@ -84,7 +101,7 @@ class AuthController extends Controller
         return view('auth.passwords.reset');
     }
 
-    public function directResetPassword(Request $request)
+   public function directResetPassword(Request $request)
     {
         $rules = [
             'email' => 'required|email|exists:karyawan,email',
@@ -100,18 +117,36 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
             return back()->withErrors($validator)->withInput();
         }
+
         try {
             DB::table('karyawan')
                 ->where('email', $request->email)
                 ->update([
                     'password' => Hash::make($request->password),
                 ]);
-
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Password berhasil diubah! Silakan login dengan password baru Anda.'
+                ], 200);
+            }
             return redirect('/')->with('success', 'Password berhasil diubah! Silakan login dengan password baru Anda.');
 
         } catch (\Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Terjadi kesalahan saat mengubah password.'
+                ], 500);
+            }
             return back()->with('warning', 'Terjadi kesalahan saat mengubah password. Coba lagi.');
         }
     }
@@ -120,10 +155,12 @@ class AuthController extends Controller
     public function proseslogin(Request $request)
     {
         if (Auth::guard('karyawan')->attempt(['email'=> $request->email, 'password' => $request->password])) {
-
             $user = Auth::guard('karyawan')->user();
             if ($request->wantsJson()) {
-                $token = $user->createToken('flutter-karyawan')->plainTextToken;
+                $token = bin2hex(random_bytes(40));
+                \Illuminate\Support\Facades\DB::table('karyawan')
+                    ->where('email', $user->email)
+                    ->update(['remember_token' => $token]);
 
                 return response()->json([
                     'status' => true,
@@ -134,14 +171,14 @@ class AuthController extends Controller
             }
             $request->session()->regenerate();
             return redirect('/dashboard');
-        } else {
+        }
+        else {
             if ($request->wantsJson()) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Email atau Password Salah'
                 ], 401);
             }
-
             return redirect('/')->with(['warning'=>'Email / Password Salah']);
         }
     }
