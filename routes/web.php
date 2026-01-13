@@ -10,6 +10,7 @@ use App\Http\Controllers\DepartemenController;
 use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\KonfigurasiController;
+use App\Http\Controllers\FaceEnrollmentController;
 
 
 // LOGIN & REGISTER KARYAWAN
@@ -23,26 +24,35 @@ Route::middleware(['guest:karyawan'])->group(function(){
 // ROUTE KARYAWAN
 Route::middleware(['auth:karyawan'])->group(function(){
     Route::post('/proseslogout', [AuthController::class, 'proseslogout'])->name('karyawan.logout');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth:karyawan');
-    Route::get('/settings', [PresensiController::class, 'settings']);
 
-    //Presensi
-    Route::get('/presensi/create', [PresensiController::class, 'create']);
-    Route::post('/presensi/store', [PresensiController::class, 'store'])->name('presensi.store')->middleware('auth:karyawan');
-    Route::post('/presensi/cekpengajuanizin', [PresensiController::class, 'cekPengajuanIzin']);
+    //Validasi Wajah
+    Route::get('/registrasi-wajah', [FaceEnrollmentController::class, 'index'])->name('face.enroll');
+    Route::post('/registrasi-wajah/proses', [FaceEnrollmentController::class, 'store'])->name('face.store');
 
-    //Edit Profile
-    Route::get('/editprofile', [PresensiController::class,'editprofile']);
-    Route::post('/presensi/{email}/updateprofile', [PresensiController::class, 'updateprofile'])->name('profile.update.web')->where('email', '.*');
+    Route::middleware(['cek.wajah'])->group(function() {
 
-    //Histori
-    Route::get('/presensi/histori', [PresensiController::class,'histori']);
-    Route::post('/gethistori', [PresensiController::class,'gethistori']);
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+        Route::get('/settings', [PresensiController::class, 'settings']);
 
-    //Izin
-    Route::get('/presensi/izin', [PresensiController::class, 'izin']);
-    Route::get('/presensi/buatizin', [PresensiController::class, 'buatizin']);
-    Route::post('/presensi/storeizin', [PresensiController::class, 'storeizin']);
+        //Presensi
+        Route::get('/presensi/create', [PresensiController::class, 'create']);
+        Route::post('/presensi/store', [PresensiController::class, 'store'])->name('presensi.store');
+        Route::post('/presensi/cekpengajuanizin', [PresensiController::class, 'cekPengajuanIzin']);
+
+        //Edit Profile
+        Route::get('/editprofile', [PresensiController::class,'editprofile']);
+        Route::post('/presensi/{email}/updateprofile', [PresensiController::class, 'updateprofile'])->name('profile.update.web')->where('email', '.*');
+
+        //Histori
+        Route::get('/presensi/histori', [PresensiController::class,'histori']);
+        Route::post('/gethistori', [PresensiController::class,'gethistori']);
+
+        //Izin
+        Route::get('/presensi/izin', [PresensiController::class, 'izin']);
+        Route::get('/presensi/buatizin', [PresensiController::class, 'buatizin']);
+        Route::post('/presensi/storeizin', [PresensiController::class, 'storeizin']);
+
+});
 
 
 });
