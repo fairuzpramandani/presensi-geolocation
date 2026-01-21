@@ -11,6 +11,9 @@ use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\KonfigurasiController;
 use App\Http\Controllers\FaceEnrollmentController;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\File;
+use App\Http\Middleware\CheckFaceEnrollment;
 
 
 // LOGIN & REGISTER KARYAWAN
@@ -22,14 +25,14 @@ Route::middleware(['guest:karyawan'])->group(function(){
 });
 
 // ROUTE KARYAWAN
-Route::middleware(['auth:karyawan'])->group(function(){
+Route::middleware(['auth:karyawan', CheckFaceEnrollment::class])->group(function(){
     Route::post('/proseslogout', [AuthController::class, 'proseslogout'])->name('karyawan.logout');
 
     //Validasi Wajah
+
     Route::get('/registrasi-wajah', [FaceEnrollmentController::class, 'index'])->name('face.enroll');
     Route::post('/registrasi-wajah/proses', [FaceEnrollmentController::class, 'store'])->name('face.store');
 
-    Route::middleware(['cek.wajah'])->group(function() {
 
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/settings', [PresensiController::class, 'settings']);
@@ -51,8 +54,6 @@ Route::middleware(['auth:karyawan'])->group(function(){
         Route::get('/presensi/izin', [PresensiController::class, 'izin']);
         Route::get('/presensi/buatizin', [PresensiController::class, 'buatizin']);
         Route::post('/presensi/storeizin', [PresensiController::class, 'storeizin']);
-
-});
 
 
 });
@@ -133,4 +134,20 @@ Route::middleware(['auth:user'])->group(function () {
     Route::post('/konfigurasi/editjamkerja', [KonfigurasiController::class, 'editjamkerja']);
     Route::post('/konfigurasi/updatejamkerja', [KonfigurasiController::class, 'updatejamkerja']);
     Route::post('/konfigurasi/{kode_jam_kerja}/delete', [KonfigurasiController::class, 'deletejamkerja']);
+});
+
+Route::get('/storage/uploads/karyawan/{filename}', function ($filename) {
+    $path = storage_path('app/public/uploads/karyawan/' . $filename);
+
+    if (!File::exists($path)) {
+        abort(404);
+    }
+
+    $file = File::get($path);
+    $type = File::mimeType($path);
+
+    $response = Response::make($file, 200);
+    $response->header("Content-Type", $type);
+
+    return $response;
 });

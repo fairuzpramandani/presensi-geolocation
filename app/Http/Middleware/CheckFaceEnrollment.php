@@ -11,10 +11,10 @@ class CheckFaceEnrollment
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check()) {
-            $user = Auth::user();
+        if (Auth::guard('karyawan')->check()) {
+            $user = Auth::guard('karyawan')->user();
             if (is_null($user->face_embedding)) {
-                if ($request->routeIs('face.enroll') || $request->routeIs('face.store') || $request->routeIs('logout')) {
+                if ($request->routeIs('face.enroll') || $request->routeIs('face.store') || $request->routeIs('karyawan.logout')) {
                     return $next($request);
                 }
                 return redirect()->route('face.enroll')->with('warning', 'Mohon lakukan validasi wajah terlebih dahulu sebelum mengakses sistem.');

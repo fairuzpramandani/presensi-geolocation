@@ -14,14 +14,12 @@
 
 @section('content')
 <style>
-    /* RESET */
     .appBottomMenu, .bottom-nav, .navbar, nav { display: none !important; }
     body { background-color: #1a1a1a !important; overflow: hidden; }
     .row-camera { position: fixed; top: 56px; left: 0; width: 100%; height: calc(100vh - 56px); background: #000; z-index: 99; margin: 0; padding: 0; }
     .camera-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
     video#camera-stream { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-    /* MASKING OVAL */
     .camera-container::after {
         content: ""; position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
         width: 280px; height: 380px;
@@ -33,12 +31,10 @@
     .camera-container.success::after { border-color: #2ecc71; }
     .camera-container.error::after { border-color: #e74c3c; }
 
-    /* INSTRUKSI */
     .instruction-box { position: absolute; top: 10%; width: 90%; text-align: center; z-index: 20; color: white; }
     .instruction-title { font-size: 20px; font-weight: bold; text-shadow: 0 2px 4px black; margin-bottom: 5px; }
     .instruction-desc { font-size: 14px; opacity: 0.9; text-shadow: 0 1px 2px black; }
 
-    /* TOMBOL */
     .capture-btn-container { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 999; }
     .btn-shutter {
         width: 75px; height: 75px; background-color: white; border-radius: 50%;
@@ -48,12 +44,10 @@
     .btn-shutter:active { transform: scale(0.9); }
     .btn-shutter ion-icon { font-size: 32px; color: #333; }
 
-    /* INDIKATOR 4 STEP */
     .step-indicator { position: absolute; top: 20px; right: 20px; z-index: 30; display: flex; gap: 8px; }
     .dot { width: 10px; height: 10px; background: rgba(255,255,255,0.3); border-radius: 50%; }
     .dot.active { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
 
-    /* LOADING */
     #loading-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: none; justify-content: center; align-items: center; flex-direction: column; color: white; }
 </style>
 
@@ -99,8 +93,6 @@
 <script>
     const PYTHON_API_URL = "http://127.0.0.1:5000/validasi-wajah";
     const USER_ID = "{{ Auth::user()->email }}";
-
-    // UI Elements
     const video = document.getElementById('camera-stream');
     const canvas = document.getElementById('canvas-processor');
     const camContainer = document.getElementById('cam-container');
@@ -109,8 +101,6 @@
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
 
-    // LOGIKA 4 TAHAP
-    // 1: Depan, 2: Kiri, 3: Kanan, 4: Kedip
     let currentStep = 1;
     let mainPhotoBase64 = null;
 
@@ -123,7 +113,6 @@
     startCamera();
 
     async function processStep() {
-        // Capture
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.translate(canvas.width, 0); ctx.scale(-1, 1);
@@ -134,12 +123,10 @@
         const formData = new FormData();
         formData.append('foto', blob, 'capture.jpg');
         formData.append('user_id', USER_ID);
-
-        // Tentukan Action Python
         let action = 'register_center';
         if (currentStep === 2) action = 'check_liveness_left';
         if (currentStep === 3) action = 'check_liveness_right';
-        if (currentStep === 4) action = 'check_liveness_blink'; // Step Baru
+        if (currentStep === 4) action = 'check_liveness_blink';
         formData.append('action', action);
 
         loadingOverlay.style.display = 'flex';

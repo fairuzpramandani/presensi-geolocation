@@ -90,62 +90,69 @@
                                             <th>Nama</th>
                                             <th>Jabatan</th>
                                             <th>No. HP</th>
-                                            <th>Foto</th>
+                                            <th class="text-center">Foto Profil</th>
+                                            <th class="text-center">Foto Validasi</th>
+                                            <th class="text-center">Status</th>
                                             <th>Departemen</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
-                                        <tbody>
-                                            @foreach ($karyawan as $d)
-                                            @php
-                                                $path = Storage::url('uploads/karyawan/'.$d->foto);
-                                            @endphp
-                                                <tr>
-                                                    <td>{{ $loop->iteration + $karyawan->firstItem() -1 }}</td>
-                                                    <td>{{ $d->email }}</td>
-                                                    <td>{{ $d->nama_lengkap }}</td>
-                                                    <td>{{ $d->jabatan }}</td>
-                                                    <td>{{ $d->no_hp }}</td>
-                                                    <td>
-                                                        @if (empty($d->foto))
-                                                        <img src="assets/img/sample/avatar/avatar1.jpg" alt="" class="avatar">
-                                                        @else
-                                                        <img src="{{ url($path) }}" class="avatar" alt="">
-                                                        @endif
-                                                    </td>
-                                                    <td>{{ $d->nama_dept }}</td>
-                                                    <td>
-                                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                                            <a href="#" class="edit btn btn-primary btn-sm" email="{{ $d->email }}">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-edit">
-                                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                                    <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" />
-                                                                    <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" />
-                                                                    <path d="M16 5l3 3" />
-                                                                </svg>
-                                                            </a>
-                                                            <form action="/karyawan/{{ $d->email }}/delete" method="POST" method="POST">
-                                                                @csrf
-                                                                <input type="hidden" name="email" value="{{ $d->email }}">
-                                                                <button type="submit" class="btn btn-danger btn-sm delete-confirm">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-trash">
-                                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                                                                        <path d="M4 7l16 0" />
-                                                                        <path d="M10 11l0 6" />
-                                                                        <path d="M14 11l0 6" />
-                                                                        <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-                                                                        <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
-                                                                    </svg>
-                                                                </button>
-                                                            </form>
+                                    <tbody>
+                                        @foreach ($karyawan as $d)
+                                            <tr>
+                                                <td>{{ $loop->iteration + $karyawan->firstItem() -1 }}</td>
+                                                <td>{{ $d->email }}</td>
+                                                <td>{{ $d->nama_lengkap }}</td>
+                                                <td>{{ $d->jabatan }}</td>
+                                                <td>{{ $d->no_hp }}</td>
+                                                <td class="text-center">
+                                                    @if (empty($d->foto))
+                                                        <img src="{{ asset('assets/img/sample/avatar/avatar1.jpg') }}" class="avatar" style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%;">
+                                                    @else
+                                                        <img src="{{ asset('storage/uploads/karyawan/'.$d->foto) }}" class="avatar" style="width: 40px; height: 40px; object-fit: cover; border-radius: 50%;">
+                                                    @endif
+                                                </td>
+                                                <td class="text-center">
+                                                    @if(!empty($d->foto_wajah))
+                                                        <div style="position: relative; display: inline-block;">
+                                                            <img src="{{ asset('storage/uploads/karyawan/'.$d->foto_wajah) }}" class="avatar" style="width: 40px; height: 40px; object-fit: cover; border-radius: 5px; border: 2px solid #2ecc71;">
                                                         </div>
-                                                    </td>
-                                                    </tr>
-                                                @endforeach
-                                        </tbody>
-                                    </table>
+                                                    @else
+                                                        <span class="text-muted" style="font-size: 12px;">-</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-center">
+                                                    @if(!empty($d->face_embedding))
+                                                        <span class="badge bg-success text-white">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 3px;"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
+                                                            Terverifikasi
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-danger text-white">
+                                                            Belum Daftar
+                                                        </span>
+                                                    @endif
+                                                </td>
+
+                                                <td>{{ $d->nama_dept }}</td>
+                                                <td>
+                                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                                        <a href="#" class="edit btn btn-primary btn-sm" email="{{ $d->email }}">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-edit"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+                                                        </a>
+                                                        <form action="/karyawan/{{ $d->email }}/delete" method="POST">
+                                                            @csrf
+                                                            <input type="hidden" name="email" value="{{ $d->email }}">
+                                                            <button type="submit" class="btn btn-danger btn-sm delete-confirm">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-trash"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                                         {{ $karyawan->links("vendor.pagination.bootstrap-5") }}
                                 </div>
                             </div>

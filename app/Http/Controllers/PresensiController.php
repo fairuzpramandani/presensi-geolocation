@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Http;
 
 
 class PresensiController extends Controller
@@ -34,141 +35,112 @@ class PresensiController extends Controller
 
     public function store(Request $request)
     {
-        $email = Auth::guard('karyawan')->user()->email;
+        $user = Auth::guard('karyawan')->user();
+        $email = $user->email;
         $tgl_presensi = date("Y-m-d");
         $jam = date("H:i:s");
+        
+        // 1. Ambil Data Karyawan
         $karyawan = DB::table('karyawan')
                     ->join('jam_kerja', 'karyawan.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
                     ->where('email', $email)
                     ->first();
+                    
         if ($karyawan == null) {
-            echo "error|Maaf, Jadwal jam kerja Anda belum diatur. Silahkan hubungi HRD/Admin.|";
-            return;
+            return "error|Maaf, Jadwal jam kerja Anda belum diatur.|";
         }
+
+        // --- VALIDASI WAJAH KETAT ---
+        if (is_null($user->face_embedding)) {
+            return "error|Anda belum melakukan Registrasi Wajah.|";
+        }
+
+        $image = $request->image;
+        $image_parts = explode(";base64,", $image);
+        $image_base64 = base64_decode($image_parts[1]);
+
+        try {
+            // Timeout 10 detik agar tidak loading selamanya
+            $response = Http::timeout(10)->attach(
+                'foto', $image_base64, 'check_absen.jpg'
+            )->post('http://127.0.0.1:5000/validasi-wajah', [
+                'action' => 'verify_face', // Perintah Verifikasi
+                'target_embedding' => $user->face_embedding,
+                'user_id' => $email
+            ]);
+
+            $hasil = $response->json();
+
+            // Jika Python menolak (Wajah beda / Miring / Buram)
+            if (isset($hasil['status']) && $hasil['status'] == 'gagal') {
+                return "error|" . $hasil['pesan']; 
+            }
+        } catch (\Exception $e) {
+            return "error|Gagal terhubung ke server validasi wajah.";
+        }
+        // --- SELESAI VALIDASI WAJAH ---
+
+        // 2. Validasi Radius Lokasi
         $lokasi = $request->lokasi;
         $lokasiuser = explode(",", $lokasi);
         $latitudeuser = $lokasiuser[0];
         $longitudeuser = $lokasiuser[1];
         $lokasi_kantor_db = DB::table('konfigurasi_lokasi')->get();
 
-        if ($lokasi_kantor_db->isEmpty()) {
-            echo "error|Konfigurasi lokasi kantor belum diatur.|";
-            return;
-        }
+        if ($lokasi_kantor_db->isEmpty()) return "error|Lokasi kantor belum diatur.|";
 
         $lokasi_valid = false;
-        $nama_lokasi = '';
-
         foreach ($lokasi_kantor_db as $kantor) {
             $koordinat_kantor_array = explode(',', $kantor->lokasi_kantor);
-            $lat_kantor = $koordinat_kantor_array[0];
-            $long_kantor = $koordinat_kantor_array[1];
             $radius_db = $kantor->radius ?? 100;
-
-            $jarak = $this->distance($lat_kantor, $long_kantor, $latitudeuser, $longitudeuser);
-            $radius_user_ke_kantor = round($jarak["meters"]);
-
-            if ($radius_user_ke_kantor <= $radius_db) {
+            $jarak = $this->distance($koordinat_kantor_array[0], $koordinat_kantor_array[1], $latitudeuser, $longitudeuser);
+            
+            if (round($jarak["meters"]) <= $radius_db) {
                 $lokasi_valid = true;
-                $nama_lokasi = $kantor->nama_lokasi ?? $kantor->lokasi_kantor;
                 break;
             }
         }
 
-        if (!$lokasi_valid) {
-            echo "error|Maaf Anda Berada di Luar Radius Lokasi Kantor|";
-            return;
-        }
-        $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->count();
-        $ket = "in";
+        if (!$lokasi_valid) return "error|Maaf Anda Berada di Luar Radius Lokasi Kantor|";
 
-        if ($cek > 0) {
-            $ket = "out";
-        } else {
-            if ($jam >= $karyawan->jam_pulang) {
-                $ket = "out";
-            }elseif ($jam >= $karyawan->akhir_jam_masuk) {
-            $ket = "out";
-        }
-        }
-        $image = $request->image;
+        // 3. Simpan Presensi
+        $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->count();
+        $ket = request()->get('ket') ?? "in";
         $folderPath = "public/uploads/absen/";
-        $formatName = $email . "-" . $tgl_presensi . "-" . $ket;
-        $image_parts = explode(";base64", $image);
-        $image_base64 = base64_decode($image_parts[1]);
-        $fileName = $formatName . ".png";
+        $fileName = $email . "-" . $tgl_presensi . "-" . $ket . ".png";
         $file = $folderPath . $fileName;
+
         if ($ket == "out") {
             if ($jam < $karyawan->jam_pulang) {
-                echo "error|Belum waktunya pulang. Absen Pulang dimulai jam " . $karyawan->jam_pulang . ".|out";
-                return;
+                return "error|Belum waktunya pulang. Jam pulang: " . $karyawan->jam_pulang . ".|out";
             }
-
             if ($cek > 0) {
-                $data_pulang = [
-                    'jam_out' => $jam,
-                    'foto_out' => $fileName,
-                    'location_out' => $lokasi,
-                ];
-                $update = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->update($data_pulang);
-
-                if ($update) {
-                    echo "success|Hati-hati di jalan! Anda Berhasil Absen Pulang.|out";
-                    Storage::put($file, $image_base64);
-                } else {
-                    echo "error|Gagal Absen Pulang.|out";
-                }
+                $update = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->update([
+                    'jam_out' => $jam, 'foto_out' => $fileName, 'location_out' => $lokasi,
+                ]);
+                if($update) Storage::put($file, $image_base64);
+                return $update ? "success|Berhasil Absen Pulang.|out" : "error|Gagal Absen Pulang.|out";
             } else {
-                $data_pulang = [
-                    'email' => $email,
-                    'tgl_presensi' => $tgl_presensi,
-                    'jam_in' => NULL,
-                    'jam_out' => $jam,
-                    'foto_out' => $fileName,
-                    'location_out' => $lokasi,
-                ];
-                $simpan = DB::table('presensi')->insert($data_pulang);
-
-                if ($simpan) {
-                    echo "success|Absen Pulang Berhasil.|out";
-                    Storage::put($file, $image_base64);
-                } else {
-                    echo "error|Gagal Absen Pulang.|out";
-                }
+                $simpan = DB::table('presensi')->insert([
+                    'email' => $email, 'tgl_presensi' => $tgl_presensi, 'jam_in' => $jam, 'jam_out' => $jam,
+                    'foto_out' => $fileName, 'location_out' => $lokasi, 'kode_jam_kerja' => $karyawan->kode_jam_kerja
+                ]);
+                if($simpan) Storage::put($file, $image_base64);
+                return $simpan ? "success|Absen Pulang Berhasil.|out" : "error|Gagal Absen Pulang.|out";
             }
-        }
-        else {
+        } else {
+            // UNTUK TESTING: Comment baris di bawah ini jika ingin absen jam berapa saja
             if ($jam < $karyawan->awal_jam_masuk) {
-                echo "error|Absen Masuk Belum Dibuka. Dimulai jam " . $karyawan->awal_jam_masuk . ".|in";
-                return;
+               return "error|Absen Masuk Belum Dibuka.|in";
             }
-
-            if ($jam > $karyawan->akhir_jam_masuk) {
-                echo "error|Absen Masuk Sudah Ditutup (Batas: " . $karyawan->akhir_jam_masuk . ").|in";
-                return;
-            }
-            $pesan_sukses = "Selamat Bekerja! Absen Masuk Berhasil.";
-            if ($jam > $karyawan->jam_masuk) {
-                $pesan_sukses = "Anda Terlambat, tapi Absen Masuk diterima.";
-            }
-
-            $data = [
-                'email' => $email,
-                'tgl_presensi' => $tgl_presensi,
-                'jam_in' => $jam,
-                'foto_in' => $fileName,
-                'location_in' => $lokasi,
-                'kode_jam_kerja' => $karyawan->kode_jam_kerja
-            ];
-
-            $simpan = DB::table('presensi')->insert($data);
-
-            if ($simpan) {
-                echo "success|$pesan_sukses|in";
-                Storage::put($file, $image_base64);
-            } else {
-                echo "error|Gagal Absen Masuk.|in";
-            }
+            
+            $simpan = DB::table('presensi')->insert([
+                'email' => $email, 'tgl_presensi' => $tgl_presensi, 'jam_in' => $jam,
+                'foto_in' => $fileName, 'location_in' => $lokasi, 'kode_jam_kerja' => $karyawan->kode_jam_kerja
+            ]);
+            
+            if($simpan) Storage::put($file, $image_base64);
+            return $simpan ? "success|Selamat Bekerja! Absen Masuk Berhasil.|in" : "error|Gagal Absen Masuk.|in";
         }
     }
 
@@ -234,14 +206,20 @@ class PresensiController extends Controller
             'nama_lengkap' => $nama_lengkap,
             'no_hp' => $no_hp,
         ];
+
         if (!empty($password)) {
             $data['password'] = Hash::make($password);
         }
         if ($request->hasFile('foto')) {
             $safeEmail = str_replace(['@', '.'], '_', $userEmail);
-            $fotoName = $safeEmail . "." . $request->file('foto')->getClientOriginalExtension();
-            $folderPath = "public/uploads/karyawan/";
-            $request->file('foto')->storeAs($folderPath, $fotoName);
+            $fotoName = $safeEmail . "_" . time() . "." . $request->file('foto')->getClientOriginalExtension();
+            $folderPath = "uploads/karyawan/";
+            $oldFile = "uploads/karyawan/" . $karyawan->foto;
+            if($karyawan->foto && Storage::disk('public')->exists($oldFile)){
+                Storage::disk('public')->delete($oldFile);
+            }
+
+            $request->file('foto')->storeAs($folderPath, $fotoName, 'public');
             $data['foto'] = $fotoName;
         }
         elseif (!empty($request->foto) && is_string($request->foto)) {
@@ -253,15 +231,18 @@ class PresensiController extends Controller
             $image = base64_decode($foto_base64);
             $safeEmail = str_replace(['@', '.'], '_', $userEmail);
             $fotoName = $safeEmail . "_" . time() . ".png";
-            $folderPath = "public/uploads/karyawan/";
-
-            Storage::put($folderPath . $fotoName, $image);
-            $data['foto'] = $fotoName;
-            if ($karyawan->foto && Storage::exists($folderPath . $karyawan->foto)) {
-                Storage::delete($folderPath . $karyawan->foto);
+            $folderPath = "uploads/karyawan/";
+            $oldFile = "uploads/karyawan/" . $karyawan->foto;
+            if ($karyawan->foto && Storage::disk('public')->exists($oldFile)) {
+                Storage::disk('public')->delete($oldFile);
             }
+
+            Storage::disk('public')->put($folderPath . $fotoName, $image);
+            $data['foto'] = $fotoName;
         }
+
         $update = DB::table('karyawan')->where('email', $userEmail)->update($data);
+
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'status' => 'success',

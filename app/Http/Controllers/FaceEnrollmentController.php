@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
 class FaceEnrollmentController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
+        $user = Auth::guard('karyawan')->user();
         if ($user->face_embedding) {
             return redirect('/dashboard')->with('success', 'Wajah Anda sudah terdaftar.');
         }
@@ -20,16 +21,11 @@ class FaceEnrollmentController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Cek apakah ada data gambar dari Webcam
         $request->validate([
             'image' => 'required',
         ]);
 
-        $user = Auth::user();
-
-        // 2. PROSES DECODE (Ubah Teks Base64 Menjadi File Gambar)
-        // Format asli: "data:image/jpeg;base64,/9j/4AAQSk..."
-        // Kita buang bagian depannya ("data:image/jpeg;base64,")
+        $user = Auth::guard('karyawan')->user();
         $image_parts = explode(";base64,", $request->image);
 
         if (!isset($image_parts[1])) {
@@ -37,32 +33,28 @@ class FaceEnrollmentController extends Controller
         }
 
         $image_base64 = base64_decode($image_parts[1]);
-        $fileName = 'face_' . time() . '.jpg'; // Nama file bohongan
+        $tempFileName = 'face_check_' . time() . '.jpg';
 
         try {
-            // 3. KIRIM KE PYTHON SEBAGAI FILE (Multipart)
-            // 'foto' harus sama dengan request.files['foto'] di Python
             $response = Http::attach(
-                'foto', $image_base64, $fileName
-            )->post(env('PYTHON_API_URL') . '/validasi-wajah');
+                'foto', $image_base64, $tempFileName
+            )->post(env('PYTHON_API_URL', 'http://127.0.0.1:5000') . '/validasi-wajah');
 
-            // Cek apakah Python mati
             if ($response->failed()) {
-                return back()->with('error', 'Gagal terhubung ke server Python. Pastikan app.py berjalan.');
+                return back()->with('error', 'Gagal terhubung ke server Python.');
             }
 
             $hasil = $response->json();
-
-            // 4. CEK RESPON PYTHON
             if (isset($hasil['status']) && $hasil['status'] == 'gagal') {
-                return back()->with('error', $hasil['pesan']); // Misal: Blur atau Wajah ganda
+                return back()->with('error', $hasil['pesan']);
             }
-
-            // 5. SUKSES -> SIMPAN KE DATABASE
             if (isset($hasil['face_encoding'])) {
+                $safeEmail = str_replace(['@', '.'], '_', $user->email);
+                $namaFile = $safeEmail . '_validasi.jpg';
+                Storage::disk('public')->put('uploads/karyawan/' . $namaFile, $image_base64);
                 $user->face_embedding = json_encode($hasil['face_encoding']);
+                $user->foto_wajah = $namaFile;
                 $user->save();
-
                 return redirect('/dashboard')->with('success', 'Wajah berhasil didaftarkan! Selamat Datang.');
             } else {
                 return back()->with('error', 'Respon tidak valid dari sistem.');

@@ -5,188 +5,154 @@ import cv2
 import numpy as np
 import os
 import time
+import json
 from PIL import Image
 
 app = Flask(__name__)
 CORS(app)
 
-# Folder Debug
 UPLOAD_FOLDER = 'debug_images'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# --- FUNGSI UTILITAS ---
+# --- KONFIGURASI TINGKAT KEAMANAN ---
+STRICT_THRESHOLD = 0.40  # Semakin kecil semakin ketat
 
+# --- FUNGSI HELPER ---
 def check_blur_from_file(file_path):
     try:
         img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
         if img is None: return 0
         return cv2.Laplacian(img, cv2.CV_64F).var()
-    except:
-        return 0
+    except: return 0
 
 def check_brightness(file_path):
     try:
         img = cv2.imread(file_path)
-        lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-        return np.mean(l)
-    except:
-        return 0
+        if img is None: return 0
+        return np.mean(cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2LAB))[0])
+    except: return 0
 
 def get_eye_aspect_ratio(eye_points):
-    """
-    Menghitung Eye Aspect Ratio (EAR) untuk mendeteksi kedipan.
-    EAR = (jarak_vertikal1 + jarak_vertikal2) / (2 * jarak_horizontal)
-    """
-    # Titik mata (landmark face_recognition memberikan list titik berurutan)
-    # P1, P2, P3, P4, P5, P6
-    # Vertical 1: P2 ke P6
-    # Vertical 2: P3 ke P5
-    # Horizontal: P1 ke P4
-
     A = np.linalg.norm(np.array(eye_points[1]) - np.array(eye_points[5]))
     B = np.linalg.norm(np.array(eye_points[2]) - np.array(eye_points[4]))
     C = np.linalg.norm(np.array(eye_points[0]) - np.array(eye_points[3]))
+    return (A + B) / (2.0 * C) if C != 0 else 0
 
-    if C == 0: return 0
-    ear = (A + B) / (2.0 * C)
-    return ear
+def check_face_orientation(face_landmarks):
+    try:
+        nose_tip = face_landmarks['nose_tip']
+        left_eye = np.mean(face_landmarks['left_eye'], axis=0)
+        right_eye = np.mean(face_landmarks['right_eye'], axis=0)
+        nose = np.mean(nose_tip, axis=0)
+        
+        dist_l = np.linalg.norm(left_eye - nose)
+        dist_r = np.linalg.norm(right_eye - nose)
+        
+        ratio = dist_l / dist_r
+        
+        if ratio > 1.5: return "Toleh Kanan"
+        if ratio < 0.6: return "Toleh Kiri"
+        return "Center"
+    except:
+        return "Unknown"
 
 def check_face_status(face_landmarks):
-    """
-    Mendeteksi:
-    1. Arah Wajah (Kiri/Kanan/Center)
-    2. Status Mata (Terbuka/Tertutup)
-    """
-    status = {'direction': 'unknown', 'ratio': 0, 'eyes_closed': False, 'ear': 0}
+    status = {'direction': 'unknown', 'eyes_closed': False}
+    status['direction'] = check_face_orientation(face_landmarks)
+    ear = (get_eye_aspect_ratio(face_landmarks['left_eye']) + get_eye_aspect_ratio(face_landmarks['right_eye'])) / 2.0
+    status['eyes_closed'] = ear < 0.21
+    return status
 
-    try:
-        # --- 1. CEK ARAH WAJAH ---
-        nose_bridge = face_landmarks['nose_bridge']
-        left_eye = face_landmarks['left_eye']
-        right_eye = face_landmarks['right_eye']
-
-        left_eye_center = np.mean(left_eye, axis=0)
-        right_eye_center = np.mean(right_eye, axis=0)
-        nose_center = np.mean(nose_bridge, axis=0)
-
-        dist_left = np.linalg.norm(left_eye_center - nose_center)
-        dist_right = np.linalg.norm(right_eye_center - nose_center)
-
-        if dist_right != 0:
-            ratio = dist_left / dist_right
-            status['ratio'] = ratio
-            if ratio < 0.5: status['direction'] = 'right'
-            elif ratio > 2.0: status['direction'] = 'left'
-            elif 0.6 <= ratio <= 1.6: status['direction'] = 'center'
-
-        # --- 2. CEK MATA (EAR) ---
-        ear_left = get_eye_aspect_ratio(left_eye)
-        ear_right = get_eye_aspect_ratio(right_eye)
-        avg_ear = (ear_left + ear_right) / 2.0
-        status['ear'] = avg_ear
-
-        # Threshold Kedip: Biasanya di bawah 0.20 atau 0.25 artinya merem
-        if avg_ear < 0.21:
-            status['eyes_closed'] = True
-
-        return status
-
-    except:
-        return status
-
-# --- ENDPOINT UTAMA ---
-
+# --- ROUTE UTAMA ---
 @app.route('/validasi-wajah', methods=['POST'])
 def validasi_wajah():
     if 'foto' not in request.files:
         return jsonify({'status': 'error', 'pesan': 'Tidak ada file foto'}), 400
 
     file = request.files['foto']
-
-    # Action: register_center, check_liveness_left, check_liveness_right, check_liveness_blink
-    requested_action = request.form.get('action', 'register_center')
-    user_id = request.form.get('user_id', 'unknown')
-
-    # Simpan File
-    safe_user_id = "".join([c for c in user_id if c.isalnum() or c in ('@', '.', '_', '-')])
-    filename = f"{safe_user_id}_{requested_action}_{int(time.time())}.jpg"
+    action = request.form.get('action', 'register_center')
+    target_embedding_raw = request.form.get('target_embedding')
+    
+    filename = f"strict_{action}_{int(time.time())}.jpg"
     save_path = os.path.join(UPLOAD_FOLDER, filename)
-
-    print(f"DEBUG: Action: {requested_action}")
+    file.save(save_path)
 
     try:
-        file.save(save_path)
-    except:
-        return jsonify({'status': 'error', 'pesan': 'Gagal simpan file'}), 500
+        # 1. QUALITY CONTROL & LOGGING
+        score_blur = check_blur_from_file(save_path)
+        score_bright = check_brightness(save_path)
+        
+        # INI BAGIAN YANG MEMBUAT TERMINAL "CEREWET"
+        print(f"\n--- ANALISIS WAJAH ({action}) ---")
+        print(f"Blur Score: {score_blur:.2f} (Min 15)")
+        print(f"Bright Score: {score_bright:.2f} (Min 30)")
 
-    # Cek Blur & Brightness (Standard)
-    score_blur = check_blur_from_file(save_path)
-    if score_blur < 35.0:
-        try: os.remove(save_path)
-        except: pass
-        return jsonify({'status': 'gagal', 'pesan': 'Foto buram.'})
+        if score_blur < 15.0:
+            print("GAGAL: Foto Buram")
+            return jsonify({'status': 'gagal', 'pesan': 'Foto Buram. Pegang HP dengan stabil.'})
+        if score_bright < 30: 
+            print("GAGAL: Foto Gelap")
+            return jsonify({'status': 'gagal', 'pesan': 'Terlalu Gelap. Cari tempat terang.'})
 
-    score_bright = check_brightness(save_path)
-    if score_bright < 40:
-        try: os.remove(save_path)
-        except: pass
-        return jsonify({'status': 'gagal', 'pesan': 'Terlalu gelap.'})
-
-    # PROSES GEOMETRI
-    try:
-        img_cv = cv2.imread(save_path)
-        rgb_image = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
-        clean_image = np.array(Image.fromarray(rgb_image))
-
-        face_locations = face_recognition.face_locations(clean_image)
+        img = face_recognition.load_image_file(save_path)
+        face_locations = face_recognition.face_locations(img)
+        
         if len(face_locations) == 0:
-            return jsonify({'status': 'gagal', 'alasan': 'no_face', 'pesan': 'Wajah tidak ditemukan.'})
+            print("GAGAL: Wajah tidak ditemukan")
+            return jsonify({'status': 'gagal', 'pesan': 'Wajah tidak ditemukan.'})
+        
+        if len(face_locations) > 1:
+            print("GAGAL: Banyak wajah")
+            return jsonify({'status': 'gagal', 'pesan': 'Terdeteksi lebih dari 1 wajah. Harap sendiri.'})
 
-        face_landmarks_list = face_recognition.face_landmarks(clean_image, face_locations)
+        # Ambil Landmarks
+        face_landmarks = face_recognition.face_landmarks(img, face_locations)[0]
+        orientation = check_face_orientation(face_landmarks)
 
-        if len(face_landmarks_list) > 0:
-            status = check_face_status(face_landmarks_list[0])
-            print(f"DEBUG STATUS: {status}")
+        # 2. LOGIKA ABSENSI (VERIFIKASI)
+        if action == 'verify_face' and target_embedding_raw:
+            
+            # Cek apakah wajah menghadap lurus
+            if orientation != "Center":
+                print(f"GAGAL: Wajah miring ({orientation})")
+                return jsonify({'status': 'gagal', 'pesan': 'Wajah miring. Harap hadap LURUS ke kamera.'})
 
-            # --- LOGIKA TANTANGAN ---
-            if requested_action == 'check_liveness_left':
-                if status['direction'] == 'left':
-                    return jsonify({'status': 'sukses', 'pesan': 'Gerakan Kiri OK!'})
-                else: return jsonify({'status': 'gagal', 'pesan': 'Mohon toleh ke KIRI.'})
+            target_encoding = np.array(json.loads(target_embedding_raw))
+            current_encoding = face_recognition.face_encodings(img, face_locations)[0]
+            
+            # --- HITUNG SKOR KEMIRIPAN ---
+            distance = face_recognition.face_distance([target_encoding], current_encoding)[0]
+            
+            # PRINT HASIL KE TERMINAL
+            print(f"JARAK WAJAH: {distance:.4f}")
+            print(f"BATAS AMBANG: {STRICT_THRESHOLD}")
 
-            elif requested_action == 'check_liveness_right':
-                if status['direction'] == 'right':
-                    return jsonify({'status': 'sukses', 'pesan': 'Gerakan Kanan OK!'})
-                else: return jsonify({'status': 'gagal', 'pesan': 'Mohon toleh ke KANAN.'})
+            # JIKA JARAK LEBIH KECIL DARI 0.40 -> BERARTI COCOK
+            if distance <= STRICT_THRESHOLD:
+                print(f"HASIL: COCOK (Jarak {distance:.4f})")
+                return jsonify({'status': 'sukses', 'pesan': 'Wajah sesuai!', 'score': distance})
+            else:
+                print(f"HASIL: DITOLAK (Jarak {distance:.4f} > {STRICT_THRESHOLD})")
+                return jsonify({'status': 'gagal', 'pesan': 'Wajah tidak cocok / berbeda dengan data.'})
 
-            elif requested_action == 'check_liveness_blink':
-                if status['eyes_closed']:
-                    return jsonify({'status': 'sukses', 'pesan': 'Kedipan Terdeteksi!'})
-                else:
-                    # Jika mata terbuka (EAR > 0.21)
-                    return jsonify({'status': 'gagal', 'pesan': 'Mohon KEDIPKAN mata anda.'})
+        # 3. LOGIKA REGISTRASI
+        status = check_face_status(face_landmarks)
+        if action == 'register_center':
+             print(f"Register: Encoding Wajah Berhasil")
+             encoding = face_recognition.face_encodings(img, face_locations)[0]
+             return jsonify({'status': 'sukses', 'face_encoding': encoding.tolist()})
 
-            elif requested_action == 'register_center':
-                if status['direction'] != 'center':
-                    return jsonify({'status': 'gagal', 'pesan': 'Mohon hadap LURUS.'})
-                if status['eyes_closed']: # Pastikan pas foto utama matanya melek
-                    return jsonify({'status': 'gagal', 'pesan': 'Jangan memejamkan mata.'})
+        # Logika Gerakan (Liveness)
+        print(f"DEBUG STATUS: {status}")
+        return jsonify({'status': 'sukses', 'pesan': 'Gerakan Diterima.'})
 
     except Exception as e:
-        print(f"ERROR: {e}")
-        return jsonify({'status': 'error', 'pesan': 'Gagal proses.'}), 500
-
-    # --- ENCODING (Hanya untuk register_center) ---
-    if requested_action != 'register_center':
-         return jsonify({'status': 'sukses', 'pesan': 'Gerakan OK'})
-
-    try:
-        face_encoding = face_recognition.face_encodings(clean_image, known_face_locations=face_locations)[0]
-        return jsonify({'status': 'sukses', 'face_encoding': face_encoding.tolist()})
-    except:
-        return jsonify({'status': 'error', 'pesan': 'Gagal encoding.'}), 500
+        print(f"ERROR SYSTEM: {e}")
+        return jsonify({'status': 'error', 'pesan': 'Server Error.'}), 500
+    finally:
+        if os.path.exists(save_path): os.remove(save_path)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Debug=False agar log tidak double
+    app.run(host='0.0.0.0', port=5000, debug=False)

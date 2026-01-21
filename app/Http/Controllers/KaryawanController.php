@@ -75,8 +75,8 @@ class KaryawanController extends Controller
             $simpan = DB::table('karyawan')->insert($data);
             if ($simpan) {
                 if ($request->hasFile('foto')) {
-                    $folderPath = "public/uploads/karyawan/";
-                    $request->file('foto')->storeAs($folderPath, $foto);
+                    $folderPath = "uploads/karyawan/";
+                    $request->file('foto')->storeAs($folderPath, $foto, 'public');
                 }
                 return redirect()->back()->with(['success' => 'Data Berhasil DiSimpan']);
             }
@@ -118,13 +118,13 @@ class KaryawanController extends Controller
             $safeEmail = str_replace(['@', '.'], '_', $email);
             $foto = $safeEmail . "." . $request->file('foto')->getClientOriginalExtension();
 
-            $path_foto_lama = "public/uploads/karyawan/" . $karyawan->foto;
+            $path_foto_lama = "uploads/karyawan/" . $karyawan->foto;
             if ($karyawan->foto != null) {
-                Storage::delete($path_foto_lama);
+                Storage::disk('public')->delete($path_foto_lama);
             }
 
-            $folderPath = "public/uploads/karyawan/";
-            $request->file('foto')->storeAs($folderPath, $foto);
+            $folderPath = "uploads/karyawan/";
+            $request->file('foto')->storeAs($folderPath, $foto, 'public');
 
             $data['foto'] = $foto;
         }
