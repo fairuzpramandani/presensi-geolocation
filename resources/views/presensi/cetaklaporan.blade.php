@@ -68,6 +68,10 @@
 
 <body class="A4">
 
+  @php
+    $chunks = $presensi->chunk(10);
+  @endphp
+  @foreach ($chunks as $chunk)
   <section class="sheet padding-10mm">
     <table style="width: 100%">
         <tr>
@@ -127,7 +131,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($presensi as $d)
+            @foreach ($chunk as $d)
             @php
                 $path_in = asset('storage/uploads/absen/'.$d->foto_in);
                 $path_out = asset('storage/uploads/absen/'.$d->foto_out);
@@ -143,7 +147,7 @@
                 }
             @endphp
             <tr>
-                <td>{{ $loop->iteration }}</td>
+                <td>{{ ($loop->parent->iteration - 1) * 10 + $loop->iteration }}</td>
                 <td>{{ date("d-m-Y",strtotime($d->tgl_presensi)) }}</td>
                 <td>{{ $d->jam_in }}</td>
                 <td>
@@ -168,6 +172,7 @@
         </tbody>
     </table>
 
+    @if ($loop->last)
     <table class="tabelttd">
         <tr>
             <td style="width: 33%;"></td>
@@ -194,8 +199,10 @@
             </td>
         </tr>
     </table>
+    @endif
 
   </section>
+  @endforeach
 
 </body>
 </html>

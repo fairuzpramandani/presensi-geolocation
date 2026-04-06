@@ -82,6 +82,12 @@ Route::middleware(['auth:karyawan', CheckFaceEnrollment::class])->group(function
     //Histori
     Route::post('/api/presensi/histori', [PresensiController::class, 'getHistoriApi']);
 
+    //Log Kecurangan
+    Route::post('/api/lapor-kecurangan', [PresensiController::class, 'laporKecurangan']);
+
+    //One to many
+    Route::get('/api/semua-wajah', [PresensiController::class, 'getSemuaWajah']);
+
 Route::middleware(['guest:user'])->group(function(){
     Route::get('/panel', function () { return view('auth.loginadmin'); })->name('loginadmin');
     Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
@@ -94,6 +100,7 @@ Route::middleware(['auth:user'])->group(function () {
     Route::get('/proseslogoutadmin',[AuthController::class, 'proseslogoutadmin']);
     Route::post('/proseslogoutadmin', [AuthController::class, 'proseslogoutadmin'])->name('admin.logout');
     Route::get('/panel/dashboardadmin',[DashboardController::class, 'dashboardadmin']);
+    Route::get('/presensi/log-keamanan', [PresensiController::class, 'logKeamanan']);
 
     //Karyawan
     Route::get('/karyawan',[KaryawanController::class, 'index']);
@@ -145,6 +152,20 @@ Route::get('/storage/uploads/karyawan/{filename}', function ($filename) {
 
     $file = File::get($path);
     $type = File::mimeType($path);
+
+    $response = Response::make($file, 200);
+    $response->header("Content-Type", $type);
+
+    return $response;
+});
+
+Route::get('/storage/uploads/absen/{filename}', function ($filename) {
+    $path = storage_path('app/public/uploads/absen/' . $filename);
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    $file = file_get_contents($path);
+    $type = mime_content_type($path);
 
     $response = Response::make($file, 200);
     $response->header("Content-Type", $type);

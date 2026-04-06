@@ -39,18 +39,18 @@ class PresensiController extends Controller
         $email = $user->email;
         $tgl_presensi = date("Y-m-d");
         $jam = date("H:i:s");
-        
-        // 1. Ambil Data Karyawan
+
+        // Ambil Data Karyawan
         $karyawan = DB::table('karyawan')
                     ->join('jam_kerja', 'karyawan.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
                     ->where('email', $email)
                     ->first();
-                    
+
         if ($karyawan == null) {
             return "error|Maaf, Jadwal jam kerja Anda belum diatur.|";
         }
 
-        // --- VALIDASI WAJAH KETAT ---
+        // VALIDASI WAJAH
         if (is_null($user->face_embedding)) {
             return "error|Anda belum melakukan Registrasi Wajah.|";
         }
@@ -60,27 +60,23 @@ class PresensiController extends Controller
         $image_base64 = base64_decode($image_parts[1]);
 
         try {
-            // Timeout 10 detik agar tidak loading selamanya
             $response = Http::timeout(10)->attach(
                 'foto', $image_base64, 'check_absen.jpg'
             )->post('http://127.0.0.1:5000/validasi-wajah', [
-                'action' => 'verify_face', // Perintah Verifikasi
+                'action' => 'verify_face',
                 'target_embedding' => $user->face_embedding,
                 'user_id' => $email
             ]);
 
             $hasil = $response->json();
 
-            // Jika Python menolak (Wajah beda / Miring / Buram)
             if (isset($hasil['status']) && $hasil['status'] == 'gagal') {
-                return "error|" . $hasil['pesan']; 
+                return "error|" . $hasil['pesan'];
             }
         } catch (\Exception $e) {
             return "error|Gagal terhubung ke server validasi wajah.";
         }
-        // --- SELESAI VALIDASI WAJAH ---
 
-        // 2. Validasi Radius Lokasi
         $lokasi = $request->lokasi;
         $lokasiuser = explode(",", $lokasi);
         $latitudeuser = $lokasiuser[0];
@@ -94,16 +90,26 @@ class PresensiController extends Controller
             $koordinat_kantor_array = explode(',', $kantor->lokasi_kantor);
             $radius_db = $kantor->radius ?? 100;
             $jarak = $this->distance($koordinat_kantor_array[0], $koordinat_kantor_array[1], $latitudeuser, $longitudeuser);
-            
+
             if (round($jarak["meters"]) <= $radius_db) {
                 $lokasi_valid = true;
                 break;
             }
         }
 
-        if (!$lokasi_valid) return "error|Maaf Anda Berada di Luar Radius Lokasi Kantor|";
+        if (!$lokasi_valid) {
+            DB::table('audit_logs')->insert([
+                'email_login'     => $email,
+                'tipe_kecurangan' => 'Fake_GPS',
+                'pesan_log'       => "User mencoba absen di koordinat ($latitudeuser, $longitudeuser) yang berada di luar radius kantor.",
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
 
-        // 3. Simpan Presensi
+            return "error|Maaf Anda Berada di Luar Radius Lokasi Kantor|";
+        }
+
+        // Simpan Presensi
         $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('email', $email)->count();
         $ket = request()->get('ket') ?? "in";
         $folderPath = "public/uploads/absen/";
@@ -129,16 +135,15 @@ class PresensiController extends Controller
                 return $simpan ? "success|Absen Pulang Berhasil.|out" : "error|Gagal Absen Pulang.|out";
             }
         } else {
-            // UNTUK TESTING: Comment baris di bawah ini jika ingin absen jam berapa saja
             if ($jam < $karyawan->awal_jam_masuk) {
                return "error|Absen Masuk Belum Dibuka.|in";
             }
-            
+
             $simpan = DB::table('presensi')->insert([
                 'email' => $email, 'tgl_presensi' => $tgl_presensi, 'jam_in' => $jam,
                 'foto_in' => $fileName, 'location_in' => $lokasi, 'kode_jam_kerja' => $karyawan->kode_jam_kerja
             ]);
-            
+
             if($simpan) Storage::put($file, $image_base64);
             return $simpan ? "success|Selamat Bekerja! Absen Masuk Berhasil.|in" : "error|Gagal Absen Masuk.|in";
         }
@@ -391,20 +396,58 @@ class PresensiController extends Controller
 
     public function monitoring()
     {
-        return view('presensi.monitoring');
+        $log_kecurangan_hari_ini = DB::table('log_kecurangan')
+            ->whereDate('waktu', date('Y-m-d'))
+            ->orderBy('waktu', 'desc')
+            ->get();
+
+        return view('presensi.monitoring', compact('log_kecurangan_hari_ini'));
+    }
+
+    public function getSemuaWajah()
+    {
+        $karyawan = DB::table('karyawan')
+            ->whereNotNull('face_embedding')
+            ->select('email', 'nama_lengkap', 'face_embedding')
+            ->get();
+
+        return response()->json($karyawan);
     }
 
     public function getpresensi(Request $request)
     {
         $tanggal = $request->tanggal;
-        $presensi = DB::table ('presensi')
-        ->select('presensi.*','nama_lengkap', 'nama_dept')
-        ->join('karyawan', 'presensi.email', '=', 'karyawan.email')
-        ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
-        ->where('tgl_presensi', $tanggal)
-        ->get();
+        $presensi = DB::table('presensi')
+            ->select('presensi.*', 'karyawan.nama_lengkap', 'karyawan.foto_wajah', 'departemen.nama_dept')
+            ->join('karyawan', 'presensi.email', '=', 'karyawan.email')
+            ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+            ->where('tgl_presensi', $tanggal)
+            ->get();
 
         return view('presensi.getpresensi', compact('presensi'));
+    }
+
+    public function logKeamanan()
+    {
+        $logs = DB::table('audit_logs')
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return view('presensi.log_keamanan', compact('logs'));
+    }
+
+    public function laporKecurangan(Request $request)
+    {
+        $email = $request->email;
+        $pesan = $request->pesan;
+
+        DB::table('log_kecurangan')->insert([
+            'email_login' => $email,
+            'pesan_kecurangan' => $pesan,
+            'waktu' => date('Y-m-d H:i:s')
+        ]);
+
+        return response()->json(['status' => 'success', 'message' => 'Kecurangan dicatat Admin']);
     }
 
     public function tampilkanpeta(Request $request)

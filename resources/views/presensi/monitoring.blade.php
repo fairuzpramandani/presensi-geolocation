@@ -4,7 +4,6 @@
     <div class="container-xl">
         <div class="row g-2 align-items-center">
             <div class="col">
-                <!-- Page pre-title -->
                 <h2 class="page-title">Monitoring Presensi</h2>
             </div>
         </div>
@@ -12,6 +11,33 @@
 </div>
 <div class="page-body">
     <div class="container-xl">
+
+        @if(isset($log_kecurangan_hari_ini) && count($log_kecurangan_hari_ini) > 0)
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-danger alert-important" role="alert">
+                    <div class="d-flex">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 15px;"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 9v2m0 4v.01"></path><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="alert-title">Peringatan Keamanan Hari Ini! Terdapat Indikasi Kecurangan (1:N)</h4>
+                            <div class="text-muted">
+                                <ul class="mb-0 mt-1 pl-3">
+                                    @foreach($log_kecurangan_hari_ini as $log)
+                                        <li>
+                                            <strong>{{ date('H:i', strtotime($log->waktu)) }} WIB</strong> -
+                                            Akun: <b>{{ $log->email_login }}</b> | Laporan: {{ $log->pesan_kecurangan }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
         <div class="row">
             <div class="col-12">
                 <div class="card">
@@ -45,6 +71,7 @@
                                             <th>Jam Pulang</th>
                                             <th>Foto</th>
                                             <th>Keterangan</th>
+                                            <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody id="loadpresensi"></tbody>
@@ -57,19 +84,45 @@
         </div>
     </div>
 </div>
+
 <div class="modal modal-blur fade" id="modal-tampilkanpeta" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Lokasi Presensi Karyawan</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body" id="loadmap">
+            <div class="modal-header">
+                <h5 class="modal-title">Lokasi Presensi Karyawan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-          </div>
+            <div class="modal-body" id="loadmap">
+            </div>
         </div>
-      </div>
     </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal-cek-wajah" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Validasi Wajah Absensi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="row">
+                    <div class="col-md-6">
+                        <span class="badge bg-primary mb-2">Foto Master (Data Karyawan)</span><br>
+                        <img id="load-foto-master" src="" class="img-fluid rounded shadow-sm" style="width: 250px; height: 250px; object-fit: cover; border: 3px solid #206bc4;">
+                        <p class="mt-2 text-muted fw-bold" id="nama-karyawan-modal">-</p>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="badge bg-success mb-2">Bukti Absen Kamera</span><br>
+                        <img id="load-foto-absen" src="" class="img-fluid rounded shadow-sm" style="width: 250px; height: 250px; object-fit: cover; border: 3px solid #2ecc71;">
+                        <p class="mt-2 text-muted fw-bold" id="jam-absen-modal">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('myscript')
@@ -83,9 +136,7 @@
                     format : 'yyyy-mm-dd'
                 });
 
-            $("#tanggal").change(function(e)
-            {
-                var tanggal = $(this).val();
+            function loadPresensi(tanggal) {
                 $.ajax({
                     type:'POST',
                     url:'/getpresensi',
@@ -97,6 +148,15 @@
                         $("#loadpresensi").html(respond);
                     }
                 });
+            }
+
+            var hariIni = new Date().toISOString().split('T')[0];
+            $("#tanggal").val(hariIni);
+            loadPresensi(hariIni);
+            $("#tanggal").change(function(e)
+            {
+                var tanggal = $(this).val();
+                loadPresensi(tanggal);
             });
 
             var modalPeta = $("#modal-tampilkanpeta");
@@ -128,6 +188,23 @@
             modalPeta.on('hidden.bs.modal', function () {
                 $("#loadmap").html("");
             });
+
+            $("#loadpresensi").on("click", ".cek-wajah", function(e) {
+                e.preventDefault();
+
+                var masterImg = $(this).attr('data-master');
+                var absenImg  = $(this).attr('data-absen');
+                var namaKaryawan = $(this).attr('data-nama');
+                var jamMasuk  = $(this).attr('data-jam');
+
+                $("#load-foto-master").attr("src", masterImg);
+                $("#load-foto-absen").attr("src", absenImg);
+                $("#nama-karyawan-modal").text("Atas Nama: " + namaKaryawan);
+                $("#jam-absen-modal").text("Waktu Absen: " + jamMasuk);
+
+                $("#modal-cek-wajah").modal("show");
+            });
+
         });
     </script>
 @endpush

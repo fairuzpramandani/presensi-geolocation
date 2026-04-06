@@ -199,6 +199,21 @@
                 </a>
               </li>
               <li class="nav-item">
+                <a class="nav-link {{ request()->is(['presensi/log-keamanan']) ? 'active' : ''}}" href="/presensi/log-keamanan" >
+                  <span class="nav-link-icon d-md-none d-lg-inline-block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-shield-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                       <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                       <path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -7.186 15.632l-1.314 .368l-1.314 -.368a12 12 0 0 1 -7.186 -15.632a12 12 0 0 0 8.5 -3z" />
+                       <path d="M12 11m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+                       <path d="M12 12v2.5" />
+                    </svg>
+                  </span>
+                  <span class="nav-link-title">
+                    Log Keamanan
+                  </span>
+                </a>
+              </li>
+              <li class="nav-item">
                 <a class="nav-link {{ request()->is(['presensi/izinsakit']) ? 'active' : ''}}" href="/presensi/izinsakit" >
                   <span class="nav-link-icon d-md-none d-lg-inline-block">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
