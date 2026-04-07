@@ -91,7 +91,7 @@
 </div>
 
 <script>
-    const PYTHON_API_URL = "http://127.0.0.1:5000/validasi-wajah";
+    const PYTHON_API_URL = "http://192.168.100.3:5000/validasi-wajah";
     const USER_ID = "{{ Auth::user()->email }}";
     const video = document.getElementById('camera-stream');
     const canvas = document.getElementById('canvas-processor');

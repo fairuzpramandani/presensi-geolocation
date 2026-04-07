@@ -88,6 +88,10 @@ Route::middleware(['auth:karyawan', CheckFaceEnrollment::class])->group(function
     //One to many
     Route::get('/api/semua-wajah', [PresensiController::class, 'getSemuaWajah']);
 
+    //absen
+    Route::post('/api/presensi/store', [PresensiController::class, 'store']);
+    Route::post('/api/registrasi-wajah', [FaceEnrollmentController::class, 'store']);
+
 Route::middleware(['guest:user'])->group(function(){
     Route::get('/panel', function () { return view('auth.loginadmin'); })->name('loginadmin');
     Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
