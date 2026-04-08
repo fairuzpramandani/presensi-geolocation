@@ -395,10 +395,7 @@ class PresensiController extends Controller
 
     public function monitoring()
     {
-        $log_kecurangan_hari_ini = DB::table('log_kecurangan')
-            ->whereDate('waktu', date('Y-m-d'))
-            ->orderBy('waktu', 'desc')
-            ->get();
+        $log_kecurangan_hari_ini = collect([]);
 
         return view('presensi.monitoring', compact('log_kecurangan_hari_ini'));
     }
@@ -438,12 +435,13 @@ class PresensiController extends Controller
     public function laporKecurangan(Request $request)
     {
         $email = $request->email;
+        $tipe = $request->tipe;
         $pesan = $request->pesan;
-
-        DB::table('log_kecurangan')->insert([
+        DB::table('audit_logs')->insert([
             'email_login' => $email,
-            'pesan_kecurangan' => $pesan,
-            'waktu' => date('Y-m-d H:i:s')
+            'tipe_kecurangan' => $tipe,
+            'pesan_log' => $pesan,
+            'created_at' => now()
         ]);
 
         return response()->json(['status' => 'success', 'message' => 'Kecurangan dicatat Admin']);
