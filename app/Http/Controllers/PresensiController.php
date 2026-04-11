@@ -46,8 +46,14 @@ class PresensiController extends Controller
         }
 
         $email = $user->email;
-        $tgl_presensi = date("Y-m-d");
-        $jam = date("H:i:s");
+        if ($request->has('waktu_asli')) {
+            $waktu = \Carbon\Carbon::parse($request->waktu_asli);
+        } else {
+            $waktu = now();
+        }
+
+        $tgl_presensi = $waktu->format('Y-m-d');
+        $jam = $waktu->format('H:i:s');
 
         $karyawan = DB::table('karyawan')
                     ->join('jam_kerja', 'karyawan.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
@@ -340,6 +346,7 @@ class PresensiController extends Controller
         $tgl_izin = $request->tgl_izin;
         $status = $request->status;
         $keterangan = $request->keterangan;
+
         $cek = DB::table('pengajuan_izin')
             ->where('email', $email)
             ->where('tgl_izin', $tgl_izin)
@@ -351,15 +358,28 @@ class PresensiController extends Controller
             }
             return redirect('/presensi/izin')->with(['error' => 'Anda Sudah Melakukan Input Pengajuan Izin Pada Tanggal Tersebut !']);
         }
+
+        $nama_file = null;
+
+        if ($request->hasFile('bukti')) {
+            $file = $request->file('bukti');
+            $safe_email = str_replace(['@', '.'], '_', $email);
+            $nama_file = time() . "_" . $safe_email . "." . $file->getClientOriginalExtension();
+
+            $file->move(public_path('uploads/izin'), $nama_file);
+        }
+
         $data = [
             'email' => $email,
             'tgl_izin' => $tgl_izin,
             'status' => $status,
             'keterangan' => $keterangan,
+            'bukti' => $nama_file,
             'status_approved' => 0
         ];
 
         $simpan = DB::table('pengajuan_izin')->insert($data);
+
         if($simpan){
             if ($request->wantsJson()) {
                 return response()->json(['status' => 'success', 'message' => 'Data Berhasil Disimpan']);

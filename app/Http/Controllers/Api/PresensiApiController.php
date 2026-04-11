@@ -157,7 +157,7 @@ class PresensiApiController extends Controller
 
         foreach ($officeLocations as $location) {
             [$latKantor, $longKantor] = explode(",", $location->lokasi_kantor);
-            $radius = $location->radius ?? 100; // Default radius 100m
+            $radius = $location->radius ?? 100;
             $distance = $this->distance($latKantor, $longKantor, $latUser, $longUser);
 
             if ($distance <= $radius) {
