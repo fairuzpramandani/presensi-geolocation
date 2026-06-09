@@ -16,6 +16,7 @@ UPLOAD_FOLDER = 'debug_images'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Threshold kecocokan wajah (Semakin rendah semakin ketat)
 STRICT_THRESHOLD = 0.40
 
 def check_blur_from_file(file_path):
@@ -32,6 +33,32 @@ def check_brightness(file_path):
         return np.mean(cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2LAB))[0])
     except: return 0
 
+def is_fake_attack(file_path):
+    """
+    Logika Anti-Spoofing Sederhana:
+    Mengecek apakah gambar kemungkinan besar berasal dari layar HP (Foto dalam Foto).
+    Layar digital biasanya memiliki tekstur Moire atau distribusi cahaya yang tidak natural.
+    """
+    try:
+        img = cv2.imread(file_path)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # 1. Analisis Frekuensi (Moire Pattern)
+        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+        # 2. Analisis Histogram
+        # Layar HP cenderung memiliki puncak warna yang sangat kontras di area tertentu
+        hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+        peak_ratio = np.max(hist) / np.sum(hist)
+
+        # Jika varians terlalu rendah (gambar terlalu smooth/flat)
+        # atau peak ratio terlalu tinggi (warna tidak natural seperti layar), indikasi fake.
+        if laplacian_var < 100 and peak_ratio > 0.15:
+            return True
+        return False
+    except:
+        return False
+
 def get_eye_aspect_ratio(eye_points):
     A = np.linalg.norm(np.array(eye_points[1]) - np.array(eye_points[5]))
     B = np.linalg.norm(np.array(eye_points[2]) - np.array(eye_points[4]))
@@ -47,7 +74,6 @@ def check_face_orientation(face_landmarks):
 
         dist_l = np.linalg.norm(left_eye - nose)
         dist_r = np.linalg.norm(right_eye - nose)
-
         ratio = dist_l / dist_r
 
         if ratio > 1.5: return "Toleh Kanan"
@@ -56,13 +82,6 @@ def check_face_orientation(face_landmarks):
     except:
         return "Unknown"
 
-def check_face_status(face_landmarks):
-    status = {'direction': 'unknown', 'eyes_closed': False}
-    status['direction'] = check_face_orientation(face_landmarks)
-    ear = (get_eye_aspect_ratio(face_landmarks['left_eye']) + get_eye_aspect_ratio(face_landmarks['right_eye'])) / 2.0
-    status['eyes_closed'] = ear < 0.21
-    return status
-
 @app.route('/validasi-wajah', methods=['POST'])
 def validasi_wajah():
     if 'foto' not in request.files:
@@ -70,9 +89,6 @@ def validasi_wajah():
 
     file = request.files['foto']
     action = request.form.get('action', 'register_center')
-    target_embedding_raw = request.form.get('target_embedding')
-
-    # Tangkap email dan nama dari Flutter untuk keperluan Log
     email_user = request.form.get('email', 'Unknown Email')
     nama_user = request.form.get('nama', 'User')
 
@@ -86,108 +102,89 @@ def validasi_wajah():
 
         print(f"\n--- ANALISIS WAJAH ({action}) ---")
         print(f"User Login: {nama_user} ({email_user})")
-        print(f"Blur Score: {score_blur:.2f} (Min 15)")
-        print(f"Bright Score: {score_bright:.2f} (Min 30)")
 
+        # 1. CEK KUALITAS (BLUR & TERANG)
         if score_blur < 15.0:
-            print("GAGAL: Foto Buram")
-            return jsonify({'status': 'gagal', 'pesan': 'Foto Buram. Pegang HP dengan stabil.'})
+            return jsonify({'status': 'gagal', 'pesan': 'Foto Buram. Pastikan kamera fokus.'})
         if score_bright < 30:
-            print("GAGAL: Foto Gelap")
             return jsonify({'status': 'gagal', 'pesan': 'Terlalu Gelap. Cari tempat terang.'})
 
+        # 2. CEK ANTI-SPOOFING (CEK FOTO HP/LAYAR)
+        if is_fake_attack(save_path):
+            print("KECURANGAN TERDETEKSI: Presentation Attack (Foto di dalam Layar)")
+            return jsonify({'status': 'gagal', 'pesan': 'Kecurangan terdeteksi! Gunakan wajah asli, bukan foto/layar HP.'})
+
+        # 3. DETEKSI WAJAH
         img = face_recognition.load_image_file(save_path)
         face_locations = face_recognition.face_locations(img)
 
         if len(face_locations) == 0:
-            print("GAGAL: Wajah tidak ditemukan")
-            return jsonify({'status': 'gagal', 'pesan': 'Wajah tidak ditemukan.'})
-
+            return jsonify({'status': 'gagal', 'pesan': 'Wajah tidak terdeteksi. Pastikan wajah terlihat jelas.'})
         if len(face_locations) > 1:
-            print("GAGAL: Banyak wajah")
-            return jsonify({'status': 'gagal', 'pesan': 'Terdeteksi lebih dari 1 wajah. Harap sendiri.'})
+            return jsonify({'status': 'gagal', 'pesan': 'Terdeteksi lebih dari 1 orang.'})
 
         face_landmarks = face_recognition.face_landmarks(img, face_locations)[0]
         orientation = check_face_orientation(face_landmarks)
 
+        # 4. PROSES VERIFIKASI (1:N)
         if action == 'verify_face':
-
             if orientation != "Center":
-                print(f"GAGAL: Wajah miring ({orientation})")
-                return jsonify({'status': 'gagal', 'pesan': 'Wajah miring. Harap hadap LURUS ke kamera.'})
+                return jsonify({'status': 'gagal', 'pesan': 'Wajah miring. Harap hadap lurus ke kamera.'})
 
             current_encoding = face_recognition.face_encodings(img, face_locations)[0]
 
-            print("Mengambil data seluruh wajah dari server (1:N)...")
+            print("Mencocokkan dengan database...")
             try:
+                # Gunakan IP lokal PC Anda (192.168.100.8) agar stabil
                 url_get_wajah = "http://127.0.0.1:8000/api/semua-wajah"
-                response = requests.get(url_get_wajah, timeout=5)
+                response = requests.get(url_get_wajah, timeout=10)
                 semua_karyawan = response.json()
             except Exception as e:
-                print(f"Gagal konek ke Laravel: {e}")
-                return jsonify({'status': 'error', 'pesan': 'Gagal mengambil data dari server.'}), 500
+                return jsonify({'status': 'error', 'pesan': 'Server Laravel tidak merespon.'}), 500
 
-            best_match_name = "Tidak Dikenal"
             best_match_email = ""
-            lowest_distance = 1.0 # Set nilai maksimal
+            best_match_name = "Tidak Dikenal"
+            lowest_distance = 1.0
 
-            # Looping untuk mencari tersangka yang paling mirip
             for karyawan in semua_karyawan:
                 if karyawan.get('face_embedding'):
                     try:
                         db_encoding = np.array(json.loads(karyawan['face_embedding']))
                         dist = face_recognition.face_distance([db_encoding], current_encoding)[0]
-
-                        # Simpan jika jaraknya lebih dekat dari rekor sebelumnya
                         if dist < lowest_distance:
                             lowest_distance = dist
                             best_match_name = karyawan['nama_lengkap']
                             best_match_email = karyawan['email']
-                    except Exception as e:
-                        print(f"Error parse array: {e}")
-                        continue
+                    except: continue
 
-            print(f"JARAK TERDEKAT: {lowest_distance:.4f} dengan {best_match_name}")
+            print(f"Hasil Compare: {best_match_name} (Dist: {lowest_distance:.4f})")
 
+            # CEK APAKAH WAJAH COCOK DENGAN AKUN YANG LOGIN
             if lowest_distance <= STRICT_THRESHOLD:
                 if best_match_email == email_user:
-                    print(f"HASIL: COCOK! Ini benar {nama_user}")
-                    return jsonify({'status': 'sukses', 'pesan': 'Wajah sesuai!', 'score': lowest_distance})
+                    return jsonify({'status': 'sukses', 'pesan': 'Presensi Berhasil!'})
                 else:
-                    print(f"KECURANGAN: Akun {nama_user} dipakai oleh {best_match_name}")
-                    pesan_alert = f"Indikasi titip absen! Akun {nama_user} mencoba absen, namun sistem mendeteksi wajah tersebut adalah {best_match_name}."
-
+                    # KECURANGAN: Wajah Orang Lain (Titip Absen)
+                    pesan_alert = f"Indikasi titip absen! Akun {nama_user} mencoba absen menggunakan wajah {best_match_name}."
                     try:
-                        url_laravel = "http://127.0.0.1:8000/api/lapor-kecurangan"
-                        payload = {'email': email_user, 'pesan': pesan_alert}
-                        requests.post(url_laravel, data=payload, timeout=3)
+                        requests.post("http://127.0.0.1:8000/api/lapor-kecurangan",
+                                      data={'email': email_user, 'pesan': pesan_alert}, timeout=3)
                     except: pass
-
-                    return jsonify({'status': 'gagal', 'pesan': f'Akses ditolak! Anda terdeteksi sebagai {best_match_name}.'})
+                    return jsonify({'status': 'gagal', 'pesan': f'Wajah Tidak Sesuai! Terdeteksi sebagai {best_match_name}.'})
             else:
-                print("HASIL: DITOLAK. Wajah tidak dikenal.")
-                pesan_alert = f"Peringatan! Akun {nama_user} mencoba absen menggunakan wajah yang Tidak Dikenal dalam sistem."
+                # WAJAH ASING
+                return jsonify({'status': 'gagal', 'pesan': 'Wajah tidak dikenali atau belum terdaftar.'})
 
-                try:
-                    url_laravel = "http://127.0.0.1:8000/api/lapor-kecurangan"
-                    payload = {'email': email_user, 'pesan': pesan_alert}
-                    requests.post(url_laravel, data=payload, timeout=3)
-                except: pass
-
-                return jsonify({'status': 'gagal', 'pesan': 'Wajah tidak dikenali dalam sistem.'})
-
-        status = check_face_status(face_landmarks)
+        # PROSES REGISTER
         if action == 'register_center':
-             print(f"Register: Encoding Wajah Berhasil")
              encoding = face_recognition.face_encodings(img, face_locations)[0]
              return jsonify({'status': 'sukses', 'face_encoding': encoding.tolist()})
 
-        print(f"DEBUG STATUS: {status}")
-        return jsonify({'status': 'sukses', 'pesan': 'Gerakan Diterima.'})
+        return jsonify({'status': 'sukses', 'pesan': 'Wajah Terverifikasi.'})
 
     except Exception as e:
-        print(f"ERROR SYSTEM: {e}")
-        return jsonify({'status': 'error', 'pesan': 'Server Error.'}), 500
+        print(f"SYSTEM ERROR: {e}")
+        return jsonify({'status': 'error', 'pesan': 'Internal Server Error.'}), 500
     finally:
         if os.path.exists(save_path): os.remove(save_path)
 

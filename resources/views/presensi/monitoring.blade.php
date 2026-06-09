@@ -59,23 +59,25 @@
                         </div>
                         <div class="row">
                             <div class="col-12">
-                                <table class="table table-striped table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>No.</th>
-                                            <th>Email</th>
-                                            <th>Nama Karyawan</th>
-                                            <th>Departemen</th>
-                                            <th>Jam Masuk</th>
-                                            <th>Foto</th>
-                                            <th>Jam Pulang</th>
-                                            <th>Foto</th>
-                                            <th>Keterangan</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="loadpresensi"></tbody>
-                                </table>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>No.</th>
+                                                <th>Email</th>
+                                                <th>Nama Karyawan</th>
+                                                <th>Departemen</th>
+                                                <th>Jam Masuk</th>
+                                                <th>Foto</th>
+                                                <th>Jam Pulang</th>
+                                                <th>Foto</th>
+                                                <th>Keterangan</th>
+                                                <th>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="loadpresensi"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -136,16 +138,23 @@
                     format : 'yyyy-mm-dd'
                 });
 
-            function loadPresensi(tanggal) {
+            // Ditambahkan parameter page agar mendukung perpindahan halaman via AJAX
+            function loadPresensi(tanggal, page = 1) {
                 $.ajax({
                     type:'POST',
-                    url:'/getpresensi',
+                    url:'/getpresensi?page=' + page,
                     data:{
                         _token:"{{ csrf_token() }}",
                         tanggal:tanggal
                     },
+                    beforeSend: function() {
+                        $("#loadpresensi").html('<tr><td colspan="10" class="text-center">Memuat Data...</td></tr>');
+                    },
                     success:function(respond){
                         $("#loadpresensi").html(respond);
+                    },
+                    error: function() {
+                        $("#loadpresensi").html('<tr><td colspan="10" class="text-center text-danger">Gagal memuat data presensi.</td></tr>');
                     }
                 });
             }
@@ -153,10 +162,21 @@
             var hariIni = new Date().toISOString().split('T')[0];
             $("#tanggal").val(hariIni);
             loadPresensi(hariIni);
+
             $("#tanggal").change(function(e)
             {
                 var tanggal = $(this).val();
-                loadPresensi(tanggal);
+                loadPresensi(tanggal, 1); // Reset ke halaman 1 jika tanggal diganti
+            });
+
+            // Intercept klik link pagination agar berjalan via AJAX (tidak refresh page)
+            $(document).on('click', '#pagination-links a', function(e) {
+                e.preventDefault();
+                var tanggal = $("#tanggal").val();
+                var url = $(this).attr('href');
+                var page = url.split('page=')[1];
+
+                loadPresensi(tanggal, page);
             });
 
             var modalPeta = $("#modal-tampilkanpeta");

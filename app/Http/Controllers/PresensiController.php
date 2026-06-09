@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Http;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PresensiController extends Controller
 {
@@ -438,7 +439,7 @@ class PresensiController extends Controller
             ->join('karyawan', 'presensi.email', '=', 'karyawan.email')
             ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
             ->where('tgl_presensi', $tanggal)
-            ->get();
+            ->paginate(10);
 
         return view('presensi.getpresensi', compact('presensi'));
     }
@@ -557,10 +558,12 @@ class PresensiController extends Controller
         $namabulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
         $namabulan_terpilih = $namabulan[$bulan] ?? '';
         $batas_telat_sql = "08:00:00";
+
         $semua_karyawan = DB::table('karyawan')
             ->select('email', 'nama_lengkap')
             ->orderBy('nama_lengkap')
             ->get();
+
         $rekap_presensi = DB::table('presensi')
             ->selectRaw("presensi.email, karyawan.nama_lengkap,
                 MAX(IF(DAY(tgl_presensi) = 1, CONCAT(TIME_FORMAT(jam_in, '%H:%i'), '-', IFNULL(TIME_FORMAT(jam_out, '%H:%i'), '00:00')), '')) as tgl_1,
@@ -607,7 +610,6 @@ class PresensiController extends Controller
             ->get()
             ->keyBy('email');
 
-
         $rekap_final = [];
 
         foreach ($semua_karyawan as $karyawan) {
@@ -627,12 +629,21 @@ class PresensiController extends Controller
                 $data_kosong->total_terlambat = 0;
                 $rekap_final[] = $data_kosong;
             }
-                if (isset($_POST['exportexcel'])) {
-                $time = date("d-M-Y H:i:s");
-                header("Content-type: application/vnd-ms-excel");
-                header("Content-Disposition: attachment; filename=Presensi Karyawan $time.xls");
-            }
         }
+
+        if (isset($_POST['exportexcel']) || $request->has('exportexcel')) {
+            $time = date("d-M-Y_H-i-s");
+            header("Content-type: application/vnd-ms-excel");
+            header("Content-Disposition: attachment; filename=Rekap_Presensi_$time.xls");
+
+            return view('presensi.cetakrekapexcel', [
+                'rekap' => $rekap_final,
+                'bulan' => $bulan,
+                'tahun' => $tahun,
+                'namabulan' => $namabulan_terpilih
+            ]);
+        }
+
         return view('presensi.cetakrekap', [
             'rekap' => $rekap_final,
             'bulan' => $bulan,

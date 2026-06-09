@@ -91,27 +91,27 @@
 
     <table class="tabeldatakaryawan" style="width: 100%">
         <tr>
-            <td style="width: 120px;">Email</td>
+            <td style="width: 120px; font-weight: bold;">Email</td>
             <td style="width: 10px;">:</td>
             <td style="text-align: left;">{{ $karyawan->email}}</td>
         </tr>
         <tr>
-            <td>Nama Karyawan</td>
+            <td style="font-weight: bold;">Nama Karyawan</td>
             <td>:</td>
             <td style="text-align: left;">{{ $karyawan->nama_lengkap }}</td>
         </tr>
         <tr>
-            <td>Jabatan</td>
+            <td style="font-weight: bold;">Jabatan</td>
             <td>:</td>
             <td style="text-align: left;">{{ $karyawan->jabatan }}</td>
         </tr>
         <tr>
-            <td>Departemen</td>
+            <td style="font-weight: bold;">Departemen</td>
             <td>:</td>
             <td style="text-align: left;">{{ $karyawan->nama_dept }}</td>
         </tr>
         <tr>
-            <td>No. Hp</td>
+            <td style="font-weight: bold;">No. Hp</td>
             <td>:</td>
             <td style="text-align: left;">{{ $karyawan->no_hp }}</td>
         </tr>
@@ -149,7 +149,7 @@
             <tr>
                 <td>{{ ($loop->parent->iteration - 1) * 10 + $loop->iteration }}</td>
                 <td>{{ date("d-m-Y",strtotime($d->tgl_presensi)) }}</td>
-                <td>{{ $d->jam_in }}</td>
+                <td style="{{ $keterangan_text == 'Terlambat' ? 'color: red; font-weight: bold;' : '' }}">{{ $d->jam_in }}</td>
                 <td>
                     @if (!empty($d->foto_in))
                         <img src="{{ $path_in }}" class="foto" alt="In" onerror="this.onerror=null;this.src='{{ asset('assets/img/camera.jpg') }}';">
@@ -166,7 +166,7 @@
                     @endif
                 </td>
                 <td>{{ $d->nama_lokasi_in ?? '-' }}</td>
-                <td>{{ $keterangan_text }}</td>
+                <td style="{{ $keterangan_text == 'Terlambat' ? 'color: red; font-weight: bold;' : '' }}">{{ $keterangan_text }}</td>
             </tr>
             @endforeach
         </tbody>

@@ -1,100 +1,95 @@
-@foreach ($presensi as $d)
-    @php
-        $batas_jam_masuk = "08:00:00";
-        $keterangan_text = "";
-        $keterangan_class = "";
-
-        if ($d->jam_in > $batas_jam_masuk) {
-            try {
-                $jam_masuk = new \DateTime($d->jam_in);
-                $batas_waktu = new \DateTime($batas_jam_masuk);
-                $diff = $jam_masuk->diff($batas_waktu);
-                $jam_terlambat = $diff->h;
-                $menit_terlambat = $diff->i;
-
-                $keterangan_text = "Terlambat ";
-
-                if ($jam_terlambat > 0) {
-                    $keterangan_text .= $jam_terlambat . " Jam " . $menit_terlambat . " Menit";
-                } else {
-                    $keterangan_text .= $menit_terlambat . " Menit";
-                }
-
-                $keterangan_class = "bg-danger";
-            } catch (Exception $e) {
-                $keterangan_text = "Terlambat";
-                $keterangan_class = "bg-danger";
-            }
-        } else {
-            $keterangan_text = "Tepat Waktu";
-            $keterangan_class = "bg-success";
-        }
-
-        $path_in = Storage::url('uploads/absen/'.$d->foto_in);
-        $path_out = Storage::url('uploads/absen/'.$d->foto_out);
-        $path_wajah = Storage::url('uploads/karyawan/'.$d->foto_wajah);
-    @endphp
-
+@if($presensi->isEmpty())
     <tr>
-        <td>{{ $loop->iteration }}</td>
-        <td>{{ $d->email }}</td>
-        <td>{{ $d->nama_lengkap }}</td>
-        <td>{{ $d->nama_dept }}</td>
-        <td>{{ $d->jam_in }}</td>
-        <td>
-            @if ($d->foto_in)
-                <img src="{{ url($path_in) }}" class="avatar" alt="">
-            @endif
-        </td>
-        <td>{{ $d->jam_out ?? 'Belum Pulang' }}</td>
-        <td>
-            @if ($d->foto_out)
-                <img src="{{ url($path_out) }}" class="avatar" alt="">
-            @endif
-        </td>
-        <td>
-            <span class="badge {{ $keterangan_class }}">{{ $keterangan_text }}</span>
-        </td>
-        <td>
-            <div style="display: flex; gap: 5px;">
-                <a href="#" class="btn btn-primary btn-sm tampilkanpeta" id="{{ $d->id }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-map-pin-2" style="margin: 0;">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7" /><path d="M9 4v13" />
-                        <path d="M15 7v5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" />
-                        <path d="M19 18v.01" />
-                    </svg>
-                </a>
-
-                <a href="#" class="btn btn-info btn-sm cek-wajah"
-                   data-nama="{{ $d->nama_lengkap }}"
-                   data-jam="{{ $d->jam_in }}"
-                   data-master="{{ url($path_wajah) }}"
-                   data-absen="{{ url($path_in) }}">
-                   <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-face-id" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin: 0;"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M4 8v-2a2 2 0 0 1 2 -2h2"></path><path d="M4 16v2a2 2 0 0 0 2 2h2"></path><path d="M16 4h2a2 2 0 0 1 2 2v2"></path><path d="M16 20h2a2 2 0 0 0 2 -2v-2"></path><path d="M9 10l.01 0"></path><path d="M15 10l.01 0"></path><path d="M9 15a3.5 3.5 0 0 0 6 0"></path></svg>
-                </a>
-            </div>
-        </td>
+        <td colspan="10" class="text-center text-muted">Tidak ada data presensi pada tanggal ini.</td>
     </tr>
-@endforeach
+@else
+    @foreach ($presensi as $d)
+        @php
+            $batas_jam_masuk = "08:00:00";
+            $keterangan_text = "";
+            $keterangan_class = "";
 
-<script>
-    $(function(){
-        $(".tampilkanpeta").click(function(e){
-            var id = $(this).attr("id");
-            $.ajax({
-                type:'POST',
-                url:'/tampilkanpeta',
-                data:{
-                    _token:"{{ csrf_token() }}",
-                    id : id
-                },
-                cache:false,
-                success:function(respond){
-                    $("#loadmap").html(respond);
-                    $("#modal-tampilkanpeta").modal("show");
+            if ($d->jam_in > $batas_jam_masuk) {
+                try {
+                    $jam_masuk = new \DateTime($d->jam_in);
+                    $batas_waktu = new \DateTime($batas_jam_masuk);
+                    $diff = $jam_masuk->diff($batas_waktu);
+                    $jam_terlambat = $diff->h;
+                    $menit_terlambat = $diff->i;
+
+                    $keterangan_text = "Terlambat ";
+
+                    if ($jam_terlambat > 0) {
+                        $keterangan_text .= $jam_terlambat . " Jam " . $menit_terlambat . " Menit";
+                    } else {
+                        $keterangan_text .= $menit_terlambat . " Menit";
+                    }
+
+                    $keterangan_class = "bg-danger";
+                } catch (Exception $e) {
+                    $keterangan_text = "Terlambat";
+                    $keterangan_class = "bg-danger";
                 }
-            });
-        });
-    });
-</script>
+            } else {
+                $keterangan_text = "Tepat Waktu";
+                $keterangan_class = "bg-success";
+            }
+
+            $path_in = Storage::url('uploads/absen/'.$d->foto_in);
+            $path_out = Storage::url('uploads/absen/'.$d->foto_out);
+            $path_wajah = Storage::url('uploads/karyawan/'.$d->foto_wajah);
+        @endphp
+
+        <tr>
+            <td>{{ $loop->iteration + $presensi->firstItem() - 1 }}</td>
+            <td>{{ $d->email }}</td>
+            <td>{{ $d->nama_lengkap }}</td>
+            <td>{{ $d->nama_dept }}</td>
+            <td>{{ $d->jam_in }}</td>
+            <td>
+                @if ($d->foto_in)
+                    <img src="{{ url($path_in) }}" class="avatar" alt="">
+                @endif
+            </td>
+            <td>{{ $d->jam_out ?? 'Belum Pulang' }}</td>
+            <td>
+                @if ($d->foto_out)
+                    <img src="{{ url($path_out) }}" class="avatar" alt="">
+                @endif
+            </td>
+            <td>
+                <span class="badge {{ $keterangan_class }}">{{ $keterangan_text }}</span>
+            </td>
+            <td>
+                <div style="display: flex; gap: 5px;">
+                    <a href="#" class="btn btn-primary btn-sm tampilkanpeta" id="{{ $d->id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-map-pin-2" style="margin: 0;">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18.5l-3 -1.5l-6 3v-13l6 -3l6 3l6 -3v7" /><path d="M9 4v13" />
+                            <path d="M15 7v5" /><path d="M21.121 20.121a3 3 0 1 0 -4.242 0c.418 .419 1.125 1.045 2.121 1.879c1.051 -.89 1.759 -1.516 2.121 -1.879z" />
+                            <path d="M19 18v.01" />
+                        </svg>
+                    </a>
+
+                    <a href="#" class="btn btn-info btn-sm cek-wajah"
+                       data-nama="{{ $d->nama_lengkap }}"
+                       data-jam="{{ $d->jam_in }}"
+                       data-master="{{ url($path_wajah) }}"
+                       data-absen="{{ url($path_in) }}">
+                       <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-face-id" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin: 0;"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M4 8v-2a2 2 0 0 1 2 -2h2"></path><path d="M4 16v2a2 2 0 0 0 2 2h2"></path><path d="M16 4h2a2 2 0 0 1 2 2v2"></path><path d="M16 20h2a2 2 0 0 0 2 -2v-2"></path><path d="M9 10l.01 0"></path><path d="M15 10l.01 0"></path><path d="M9 15a3.5 3.5 0 0 0 6 0"></path></svg>
+                    </a>
+                </div>
+            </td>
+        </tr>
+    @endforeach
+
+    @if ($presensi->hasPages())
+        <tr>
+            <td colspan="10">
+                <div class="d-flex justify-content-center mt-3" id="pagination-links">
+                    {{ $presensi->links("vendor.pagination.bootstrap-5") }}
+                </div>
+            </td>
+        </tr>
+    @endif
+@endif
