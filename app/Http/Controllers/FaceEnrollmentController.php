@@ -21,22 +21,30 @@ class FaceEnrollmentController extends Controller
 
     public function store(Request $request)
     {
+        $isApi = $request->wantsJson() || $request->has('email') || $request->bearerToken();
         $user = Auth::guard('karyawan')->user();
-        $isApi = $request->wantsJson() || $request->bearerToken();
 
         if (!$user) {
             $token = $request->bearerToken();
-            $user = DB::table('karyawan')->where('remember_token', $token)->first();
+            if ($token) {
+                $user = DB::table('karyawan')->where('remember_token', $token)->first();
+            }
+        }
+
+        if (!$user && $request->has('email')) {
+            $user = DB::table('karyawan')->where('email', $request->email)->first();
         }
 
         if (!$user) {
-            return $isApi ? response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401) : back();
+            return $isApi ? response()->json(['status' => 'error', 'message' => 'Identitas User (Email) tidak terdeteksi.'], 401) : back();
         }
 
         $image_base64 = "";
 
         if ($request->hasFile('image')) {
             $image_base64 = file_get_contents($request->file('image')->getPathname());
+        } elseif ($request->hasFile('foto')) {
+            $image_base64 = file_get_contents($request->file('foto')->getPathname());
         } else {
             if (!$request->image) {
                 return $isApi ? response()->json(['status' => 'error', 'message' => 'Foto tidak ditemukan.']) : back();
@@ -55,10 +63,12 @@ class FaceEnrollmentController extends Controller
                 ->post('http://127.0.0.1:5000/validasi-wajah', [
                     'action' => 'register_center',
                     'email' => $user->email,
-                    'nama' => $user->nama_lengkap
+                    'nama' => $user->nama_lengkap ?? 'Karyawan'
                 ]);
 
-            if ($response->failed()) return $isApi ? response()->json(['status' => 'error', 'message' => 'Gagal koneksi ke Python.']) : back();
+            if ($response->failed()) {
+                return $isApi ? response()->json(['status' => 'error', 'message' => 'Gagal koneksi ke engine Python.']) : back();
+            }
 
             $hasil = $response->json();
             if (isset($hasil['status']) && $hasil['status'] == 'gagal') {
@@ -75,7 +85,13 @@ class FaceEnrollmentController extends Controller
                     'foto_wajah' => $namaFile
                 ]);
 
-                return $isApi ? response()->json(['status' => 'success', 'message' => 'Wajah berhasil didaftarkan!']) : redirect('/dashboard');
+                $accuracy = isset($hasil['accuracy']) ? $hasil['accuracy'] : (isset($hasil['kemiripan']) ? $hasil['kemiripan'] : 100.0);
+
+                return $isApi ? response()->json([
+                    'status' => 'success',
+                    'message' => 'Wajah berhasil didaftarkan!',
+                    'accuracy' => $accuracy
+                ]) : redirect('/dashboard');
             }
 
             return $isApi ? response()->json(['status' => 'error', 'message' => 'Respon tidak valid dari server wajah.']) : back();
