@@ -25,7 +25,6 @@ class PresensiApiController extends Controller
         return $meters;
     }
 
-    // Cek apakah sudah absen + ambil lokasi kantor
     public function create()
     {
         $hariini = date("Y-m-d");
@@ -67,6 +66,22 @@ class PresensiApiController extends Controller
         $today = now()->format('Y-m-d');
         $currentTime = now()->format('H:i:s');
 
+        if ($request->input('is_rooted') == '1' || $request->input('is_rooted') == true) {
+
+            DB::table('audit_logs')->insert([
+                'email'       => $user->email,
+                'activity'    => 'ROOT_DETECTION',
+                'description' => 'Mencoba memanipulasi absensi menggunakan perangkat ter-root / compromised.',
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Absensi Ditolak! Server mendeteksi perangkat Anda tidak aman (Rooted Device).'
+            ], 403);
+        }
+
         // Cek lokasi user
         $locationCheck = $this->checkUserLocation($request->lokasi);
         if (!$locationCheck['is_valid']) {
@@ -77,7 +92,7 @@ class PresensiApiController extends Controller
         }
         $nama_lokasi = $locationCheck['location_name'];
 
-        // Cek presensi hari ini
+        // Cek presensi
         $presensiHariIni = DB::table('presensi')
             ->where('tgl_presensi', $today)
             ->where('email', $user->email)
@@ -91,7 +106,6 @@ class PresensiApiController extends Controller
 
         // Logika Absen Pulang
         if ($presensiHariIni) {
-            // Asumsi jam pulang dari konfigurasi, default 17:00
             $jamPulang = DB::table('konfigurasi_jam')->value('jam_pulang') ?? '17:00:00';
             if ($currentTime < $jamPulang) {
                 return response()->json([
@@ -210,6 +224,7 @@ class PresensiApiController extends Controller
             'data' => $histori
         ]);
     }
+
     private function checkMultiLokasi($lat, $long)
     {
         $lokasi = \App\Models\KonfigurasiLokasi::all();
